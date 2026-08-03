@@ -1,0 +1,1807 @@
+<!doctype html>
+<html lang="en" data-palette="#2a78d6,#1baf7a,#4a3aa7,#eda100,#e34948">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ATD Baseball — Platform Prototype</title>
+<style>
+/* ============================================================================
+   ATD Baseball prototype. Single file, no dependencies, no network.
+   Colours are the validated 5-family categorical set (all-pairs safe); every
+   block also carries a text label, so identity is never colour-alone.
+   ========================================================================== */
+:root{
+  --navy-900:#0B2545; --navy-800:#132849; --navy-700:#1c3760; --navy-600:#264878;
+  --navy-500:#365d92; --navy-200:#c2d1e5; --navy-50:#f2f5f9;
+  --clay-600:#C8102E; --clay-700:#a30c26;
+  --chalk-50:#fbfcfd; --chalk-100:#F5F6F8; --chalk-200:#e9ebef; --chalk-300:#d6dae1;
+  --chalk-500:#8b94a3; --chalk-600:#6b7484; --chalk-700:#545b69; --chalk-900:#22262e;
+  --surface:#ffffff; --page:#eef1f5;
+  --ok:#1a7f37; --warn:#bf8700; --danger:#b42318; --info:#0969da;
+  --cat-instruction:#2a78d6; --cat-rental:#1baf7a; --cat-hittrax:#4a3aa7;
+  --cat-camp:#eda100; --cat-party:#e34948;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(11,37,69,.06),0 4px 16px rgba(11,37,69,.07);
+  --lift:0 10px 34px rgba(11,37,69,.16);
+  --font-d:'Barlow Condensed','Oswald','Haettenschweiler','Arial Narrow',system-ui,sans-serif;
+  --font-b:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page); color:var(--navy-900);
+  font-family:var(--font-b); font-size:14px; line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:var(--font-d); letter-spacing:.01em; margin:0; font-weight:600}
+button{font:inherit; color:inherit; cursor:pointer}
+:focus-visible{outline:2px solid var(--navy-500); outline-offset:2px; border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------------------------------------------------------------- chrome -- */
+.topbar{
+  position:sticky; top:0; z-index:60; background:var(--navy-900); color:#fff;
+  display:flex; align-items:center; gap:18px; padding:0 16px; height:56px;
+  box-shadow:0 1px 0 rgba(255,255,255,.08);
+}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-d);font-size:19px;letter-spacing:.04em;text-transform:uppercase}
+.brand .ball{width:22px;height:22px;border-radius:50%;background:#fff;position:relative;flex:0 0 auto}
+.brand .ball:before,.brand .ball:after{content:'';position:absolute;inset:2px;border:1.6px solid var(--clay-600);border-radius:50%;
+  clip-path:inset(0 62% 0 0)}
+.brand .ball:after{clip-path:inset(0 0 0 62%)}
+.tabs{display:flex;gap:2px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  background:transparent;border:0;color:#c7d3e4;padding:8px 13px;border-radius:9px;
+  font-size:13px;font-weight:500;white-space:nowrap;min-height:38px;
+}
+.tab:hover{background:rgba(255,255,255,.09);color:#fff}
+.tab[aria-selected=true]{background:#fff;color:var(--navy-900);font-weight:600}
+.demo-pill{
+  font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#9fb3cd;
+  border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:3px 9px;white-space:nowrap
+}
+@media(max-width:860px){.demo-pill{display:none}}
+
+.wrap{max-width:1500px;margin:0 auto;padding:18px 16px 64px}
+.view{display:none}
+.view.active{display:block;animation:fade .18s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.page-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:14px}
+.page-head h1{font-size:26px}
+.page-head p{margin:2px 0 0;color:var(--chalk-700);font-size:13px}
+.spacer{margin-left:auto}
+
+.card{background:var(--surface);border:1px solid var(--chalk-200);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-h{padding:14px 16px 10px;border-bottom:1px solid var(--chalk-200);display:flex;align-items:center;gap:10px}
+.card-h h3{font-size:16px}
+.card-b{padding:14px 16px}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 14px;
+  border-radius:10px;border:1px solid transparent;background:var(--navy-900);color:#fff;
+  font-size:13px;font-weight:600;
+}
+.btn:hover{background:var(--navy-800)}
+.btn.sec{background:var(--chalk-100);color:var(--navy-900);border-color:var(--chalk-300)}
+.btn.sec:hover{background:var(--chalk-200)}
+.btn.ghost{background:transparent;color:var(--navy-800)}
+.btn.ghost:hover{background:var(--chalk-100)}
+.btn.accent{background:var(--clay-600)}
+.btn.accent:hover{background:var(--clay-700)}
+.btn.sm{height:32px;padding:0 11px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.chip{
+  display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
+  font-size:11.5px;font-weight:600;border:1px solid var(--chalk-300);background:var(--chalk-100);color:var(--chalk-700)
+}
+.chip.ok{background:#e8f5ec;border-color:#b7ddc4;color:#12652b}
+.chip.warn{background:#fdf5e3;border-color:#ecd9a5;color:#7a5800}
+.chip.danger{background:#fdeceb;border-color:#f3c2be;color:#8f1d15}
+.chip.info{background:#e8f1fd;border-color:#bcd6f7;color:#0a4d9c}
+.chip.violet{background:#efedfa;border-color:#cdc6ee;color:#3b2e86}
+.dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
+@media(max-width:620px){.g4{grid-template-columns:1fr}}
+
+/* stat tiles: a number is the form here, not a chart */
+.stat{background:var(--surface);border:1px solid var(--chalk-200);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.stat .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--chalk-600);font-weight:600}
+.stat .val{font-family:var(--font-d);font-size:32px;line-height:1.05;margin-top:5px}
+.stat .sub{font-size:12px;color:var(--chalk-600);margin-top:3px}
+.meter{height:7px;border-radius:999px;background:var(--chalk-200);overflow:hidden;margin-top:9px}
+.meter i{display:block;height:100%;border-radius:999px;background:var(--navy-600)}
+
+/* ------------------------------------------------------------- timeline -- */
+.tl-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.seg{display:inline-flex;background:var(--chalk-200);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 13px;border-radius:8px;font-size:13px;font-weight:600;color:var(--chalk-700);min-height:32px}
+.seg button[aria-pressed=true]{background:#fff;color:var(--navy-900);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.sel{height:34px;border-radius:9px;border:1px solid var(--chalk-300);background:#fff;padding:0 9px;font-size:13px;color:var(--navy-900)}
+.toggle{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--chalk-700);cursor:pointer;user-select:none}
+
+.legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:9px 14px;background:var(--surface);
+  border:1px solid var(--chalk-200);border-radius:11px;margin-bottom:11px;font-size:12.5px;color:var(--chalk-700)}
+.legend b{font-weight:600;color:var(--navy-900)}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+.legend .sw.buf{background:repeating-linear-gradient(135deg,var(--chalk-300) 0 3px,transparent 3px 6px);border:1px solid var(--chalk-300)}
+.legend .sw.hold{background:repeating-linear-gradient(135deg,#bfa14a 0 4px,#fff 4px 8px);border:1px solid #bfa14a}
+
+.tl{background:var(--surface);border:1px solid var(--chalk-200);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden}
+.tl-scroll{overflow:auto;max-height:min(74vh,860px);overscroll-behavior:contain}
+.tl-inner{min-width:var(--tlw)}
+.tl-axis{display:flex;position:sticky;top:0;z-index:20;background:var(--surface);
+  border-bottom:1px solid var(--chalk-300);height:34px}
+.tl-axis .gutter{width:var(--gutter);flex:0 0 var(--gutter);border-right:1px solid var(--chalk-300);
+  background:var(--surface);position:sticky;left:0;z-index:22;
+  font-size:11px;color:var(--chalk-600);display:flex;align-items:center;padding-left:12px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em}
+.tl-axis .track{position:relative;flex:1}
+.tl-axis .hr{position:absolute;top:0;height:34px;border-left:1px solid var(--chalk-300);
+  font-size:11px;color:var(--chalk-600);padding-left:5px;display:flex;align-items:center;font-variant-numeric:tabular-nums}
+
+.grp{display:flex;align-items:center;gap:8px;background:var(--chalk-100);position:sticky;top:34px;z-index:15;border-top:1px solid var(--chalk-200);
+  border-bottom:1px solid var(--chalk-200);padding:5px 12px;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;color:var(--chalk-700)}
+.lane{display:flex;border-bottom:1px solid var(--chalk-200);min-height:46px}
+.lane:hover .lane-h{background:var(--navy-50)}
+.lane-h{width:var(--gutter);flex:0 0 var(--gutter);border-right:1px solid var(--chalk-300);
+  position:sticky;left:0;z-index:10;background:var(--surface);padding:7px 12px;display:flex;flex-direction:column;justify-content:center}
+.lane-h .n{font-size:13px;font-weight:600;line-height:1.2}
+.lane-h .m{font-size:11px;color:var(--chalk-600);margin-top:1px}
+.lane-t{position:relative;flex:1;
+  background-image:repeating-linear-gradient(to right,var(--chalk-200) 0 1px,transparent 1px var(--slot));
+  background-position:left top}
+.lane-t.closed{background-color:var(--chalk-100)}
+
+.blk{
+  position:absolute;top:5px;bottom:5px;border-radius:8px;padding:4px 8px;overflow:hidden;
+  border:1px solid rgba(0,0,0,.16); border-left-width:4px;
+  color:#fff; font-size:11.5px; line-height:1.25; text-align:left; cursor:pointer;
+  display:flex;flex-direction:column;justify-content:center;
+  transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.blk .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .s{opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.blk:hover,.blk:focus-visible{transform:translateY(-1px);box-shadow:var(--lift);z-index:8;filter:brightness(1.06)}
+.blk.sib{outline:2.5px solid var(--navy-900); outline-offset:1px; z-index:9; box-shadow:var(--lift)}
+.blk.dim{opacity:.3}
+.blk.hold{background:repeating-linear-gradient(135deg,#8a6d1f 0 5px,#a9862c 5px 10px)!important;
+  border-color:#6f570f!important}
+.blk.blocked{background:repeating-linear-gradient(135deg,#5c6472 0 5px,#6f7887 5px 10px)!important;border-color:#4a515d!important}
+.blk.cancelled{text-decoration:line-through;opacity:.5}
+.buf{position:absolute;top:5px;bottom:5px;border-radius:5px;pointer-events:none;
+  background:repeating-linear-gradient(135deg,rgba(11,37,69,.20) 0 3px,transparent 3px 6px);
+  border:1px dashed rgba(11,37,69,.28)}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--clay-600);z-index:12}
+.nowline:after{content:'now';position:absolute;top:-1px;left:3px;font-size:10px;font-weight:700;color:var(--clay-600);background:#fff;padding:0 3px;border-radius:3px}
+
+/* --------------------------------------------------------------- drawer -- */
+.scrim{position:fixed;inset:0;background:rgba(11,37,69,.42);z-index:90;opacity:0;pointer-events:none;transition:opacity .18s}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);z-index:95;
+  box-shadow:-14px 0 44px rgba(11,37,69,.24);transform:translateX(100%);transition:transform .22s ease;
+  display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer-h{padding:16px 18px;border-bottom:1px solid var(--chalk-200);display:flex;gap:10px;align-items:flex-start}
+.drawer-b{padding:16px 18px;overflow-y:auto;flex:1}
+.drawer-f{padding:12px 18px;border-top:1px solid var(--chalk-200);display:flex;flex-wrap:wrap;gap:7px;background:var(--chalk-50)}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:5px 12px;font-size:13px;margin:0}
+.kv dt{color:var(--chalk-600)}
+.kv dd{margin:0;font-weight:500}
+.sect{margin-top:16px}
+.sect h4{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--chalk-600);margin-bottom:7px}
+.res-row{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--chalk-200);
+  border-radius:9px;margin-bottom:6px;font-size:13px;background:var(--chalk-50)}
+.res-row .lab{margin-left:auto;font-size:11.5px;color:var(--chalk-600)}
+.money{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+.money.tot{border-top:1px solid var(--chalk-300);margin-top:6px;padding-top:8px;font-weight:700}
+.note{background:#fdf5e3;border:1px solid #ecd9a5;border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b4e00}
+
+/* ---------------------------------------------------------------- lists -- */
+.row{display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid var(--chalk-200)}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--chalk-50)}
+.row .when{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;min-width:52px}
+.row .who{font-weight:600;font-size:13.5px}
+.row .what{font-size:12.5px;color:var(--chalk-600)}
+.row .acts{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.bar{width:4px;align-self:stretch;border-radius:3px;flex:0 0 4px}
+
+/* ---------------------------------------------------------------- phone -- */
+.phone-stage{display:flex;justify-content:center;padding:6px 0 20px}
+.phone{width:390px;max-width:100%;background:#fff;border:1px solid var(--chalk-300);border-radius:34px;
+  box-shadow:var(--lift);overflow:hidden;display:flex;flex-direction:column;
+  height:min(760px,calc(100vh - 170px));min-height:520px}
+.ph-status{height:26px;background:var(--navy-900);flex:0 0 auto}
+.ph-head{padding:12px 16px;border-bottom:1px solid var(--chalk-200);display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.ph-body{padding:16px;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.ph-foot{padding:12px 16px;border-top:1px solid var(--chalk-200);background:var(--chalk-50);flex:0 0 auto}
+.steps{display:flex;gap:4px;margin-bottom:14px}
+.steps i{height:3px;flex:1;border-radius:2px;background:var(--chalk-300)}
+.steps i.on{background:var(--navy-900)}
+.opt{width:100%;text-align:left;border:1px solid var(--chalk-300);background:#fff;border-radius:12px;
+  padding:12px 13px;margin-bottom:8px;display:flex;align-items:center;gap:11px;min-height:56px}
+.opt:hover{border-color:var(--navy-500);background:var(--navy-50)}
+.opt[aria-pressed=true]{border-color:var(--navy-900);border-width:2px;background:var(--navy-50)}
+.opt .nm{font-weight:600;font-size:14px}
+.opt .ds{font-size:12px;color:var(--chalk-600)}
+.opt .pr{margin-left:auto;font-weight:700;font-size:13.5px;white-space:nowrap}
+.datestrip{display:flex;gap:7px;overflow-x:auto;padding-bottom:7px;margin-bottom:12px;scrollbar-width:thin}
+.dbtn{flex:0 0 auto;width:56px;border:1px solid var(--chalk-300);background:#fff;border-radius:11px;padding:7px 0;text-align:center;min-height:58px}
+.dbtn[aria-pressed=true]{background:var(--navy-900);color:#fff;border-color:var(--navy-900)}
+.dbtn .dw{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;opacity:.75}
+.dbtn .dd{font-family:var(--font-d);font-size:19px;line-height:1.1}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.slot{border:1px solid var(--chalk-300);background:#fff;border-radius:10px;padding:9px 4px;font-size:13px;
+  font-weight:600;min-height:44px;font-variant-numeric:tabular-nums}
+.slot:hover{border-color:var(--navy-500)}
+.slot[aria-pressed=true]{background:var(--navy-900);color:#fff;border-color:var(--navy-900)}
+.slot .sub{display:block;font-size:10px;font-weight:500;opacity:.75;margin-top:1px}
+.holdbar{background:#fdf5e3;border:1px solid #ecd9a5;border-radius:11px;padding:10px 12px;
+  display:flex;align-items:center;gap:9px;font-size:12.5px;color:#6b4e00;margin-bottom:12px}
+.holdbar b{font-variant-numeric:tabular-nums}
+.race{background:#fdeceb;border:1px solid #f3c2be;border-radius:11px;padding:12px;font-size:12.5px;color:#8f1d15;margin-bottom:12px}
+
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+table.tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--chalk-600);
+  padding:8px 10px;border-bottom:1px solid var(--chalk-300);font-weight:700}
+table.tbl td{padding:9px 10px;border-bottom:1px solid var(--chalk-200)}
+table.tbl tr:last-child td{border-bottom:0}
+.mono{font-variant-numeric:tabular-nums}
+.right{text-align:right}
+
+.callout{background:var(--navy-900);color:#dce6f2;border-radius:var(--radius);padding:16px 18px;font-size:13px;line-height:1.6}
+.callout h3{color:#fff;font-size:17px;margin-bottom:7px}
+.callout code{background:rgba(255,255,255,.12);padding:1px 5px;border-radius:4px;font-size:12px}
+.callout a{color:#9fc6ff}
+
+/* ---------------------------------------------------------- public site -- */
+.site{background:#fff;border:1px solid var(--chalk-200);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.site-nav{display:flex;align-items:center;gap:20px;padding:14px 22px;border-bottom:1px solid var(--chalk-200)}
+.site-nav .brand2{font-family:var(--font-d);font-size:20px;letter-spacing:.04em;text-transform:uppercase;color:var(--navy-900)}
+.site-nav a{color:var(--chalk-700);text-decoration:none;font-size:13.5px;font-weight:500}
+.site-nav a:hover{color:var(--navy-900)}
+.hero{background:linear-gradient(160deg,var(--navy-900) 0%,var(--navy-700) 62%,#24405f 100%);
+  color:#fff;padding:46px 34px;position:relative;overflow:hidden}
+.hero:after{content:'';position:absolute;right:-70px;top:-70px;width:280px;height:280px;border-radius:50%;
+  border:26px solid rgba(255,255,255,.05)}
+.hero h2{font-size:40px;line-height:1.05;max-width:16ch}
+.hero p{margin:12px 0 0;max-width:52ch;color:#c9d7e8;font-size:15px}
+.hero .cta{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap}
+.hero .facts{margin-top:26px;display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#9fb3cd}
+.hero .facts b{display:block;font-family:var(--font-d);font-size:23px;color:#fff;line-height:1.1}
+.sec{padding:26px 34px;border-bottom:1px solid var(--chalk-200)}
+.sec:last-child{border-bottom:0}
+.sec h3{font-size:21px;margin-bottom:3px}
+.sec .lede{color:var(--chalk-700);font-size:13.5px;margin:0 0 15px}
+.cat{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
+.cat a{display:block;text-decoration:none;border:1px solid var(--chalk-200);border-radius:12px;
+  padding:14px;background:var(--chalk-50);border-top:3px solid var(--chalk-300)}
+.cat a:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.cat .t{display:block;font-weight:700;font-size:14.5px;color:var(--navy-900)}
+.cat .d{display:block;font-size:12.5px;color:var(--chalk-600);margin-top:3px;line-height:1.45}
+.cat .p{display:block;font-size:12.5px;color:var(--navy-700);font-weight:600;margin-top:8px}
+.progcard{border:1px solid var(--chalk-200);border-radius:12px;padding:15px;background:#fff}
+.progcard h4{font-size:16px}
+.progcard .meta{font-size:12.5px;color:var(--chalk-600);margin-top:3px}
+.progcard p{font-size:13px;color:var(--chalk-700);margin:9px 0 0;line-height:1.5}
+.fill{height:7px;border-radius:999px;background:var(--chalk-200);overflow:hidden;margin-top:11px}
+.fill i{display:block;height:100%;border-radius:999px;background:var(--cat-camp)}
+.coachcard{border:1px solid var(--chalk-200);border-radius:12px;padding:15px;background:#fff;text-align:center}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--navy-900);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:20px;margin:0 auto 9px}
+.price-tier{border:1px solid var(--chalk-200);border-radius:12px;padding:16px;background:#fff;display:flex;flex-direction:column}
+.price-tier .amt{font-family:var(--font-d);font-size:30px;line-height:1.05;margin:6px 0 2px}
+.price-tier ul{margin:11px 0 0;padding-left:17px;font-size:12.5px;color:var(--chalk-700);line-height:1.75}
+.price-tier .btn{margin-top:auto}
+
+/* -------------------------------------------------------------- portal --- */
+.subnav{display:flex;gap:3px;flex-wrap:wrap;border-bottom:1px solid var(--chalk-200);margin-bottom:15px}
+.subnav button{background:transparent;border:0;border-bottom:2px solid transparent;padding:9px 13px;
+  font-size:13.5px;font-weight:600;color:var(--chalk-600);min-height:40px}
+.subnav button[aria-selected=true]{color:var(--navy-900);border-bottom-color:var(--clay-600)}
+.subnav button:hover{color:var(--navy-900)}
+.next-card{background:linear-gradient(150deg,var(--navy-900),var(--navy-700));color:#fff;
+  border-radius:var(--radius);padding:19px 21px}
+.next-card .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#9fb3cd;font-weight:700}
+.next-card h3{font-size:23px;margin-top:5px}
+.next-card .when{font-size:14px;color:#dbe6f3;margin-top:3px}
+.next-card .who{font-size:12.5px;color:#9fb3cd;margin-top:9px}
+.pkg{border:1px solid var(--chalk-200);border-radius:12px;padding:15px;background:#fff}
+.pkg .big{font-family:var(--font-d);font-size:34px;line-height:1}
+
+@media(max-width:760px){
+  .hero{padding:30px 18px}.hero h2{font-size:29px}
+  .sec{padding:20px 18px}
+  .site-nav{gap:12px;overflow-x:auto}
+  .wrap{padding:14px 11px 56px}
+  .page-head h1{font-size:22px}
+  .tl-hide-sm{display:none}
+  .drawer{width:100%}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><span class="ball"></span> ATD Baseball</div>
+  <span class="demo-pill" id="dayPill"></span>
+  <nav class="tabs" role="tablist" aria-label="Prototype areas">
+    <button class="tab" role="tab" aria-selected="true"  data-view="site">Website</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="book">Book a Lesson</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="account">My Account</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="calendar">Master Calendar</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="desk">Front Desk</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="coach">Coach</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="builder">Service Builder</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="about">How it works</button>
+  </nav>
+</header>
+
+<main class="wrap">
+
+<!-- ======================================================== MASTER CALENDAR -->
+<section class="view" id="view-calendar" role="tabpanel" aria-label="Master calendar">
+  <div class="page-head">
+    <div>
+      <h1>Master Calendar</h1>
+      <p id="calSub"></p>
+    </div>
+    <div class="spacer"></div>
+    <div class="tl-toolbar" style="margin:0">
+      <div class="seg" role="group" aria-label="View mode">
+        <button data-mode="day" aria-pressed="true">Day</button>
+        <button data-mode="agenda" aria-pressed="false">Agenda</button>
+      </div>
+      <select class="sel" id="filterCat" aria-label="Filter by category"></select>
+      <label class="toggle"><input type="checkbox" id="showBuf" checked> Show buffers</label>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div id="tlHost"></div>
+  <div id="agendaHost" style="display:none"></div>
+
+  <p style="font-size:12.5px;color:var(--chalk-600);margin-top:11px;max-width:78ch">
+    Hover or focus any block to highlight every other resource the same booking is holding.
+    The party at 3:00 lights up four lanes at once — party room, two cages and a host — because
+    that is genuinely what it consumes.
+  </p>
+</section>
+
+<!-- ============================================================= FRONT DESK -->
+<section class="view" id="view-desk" role="tabpanel" aria-label="Front desk">
+  <div class="page-head">
+    <div><h1>Front Desk — Today</h1><p>The one screen the counter lives in.</p></div>
+  </div>
+  <div class="grid g4" id="deskStats" style="margin-bottom:14px"></div>
+  <div class="grid g2">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h"><h3>In the building now</h3><span class="spacer"></span><span class="chip ok" id="nowCount"></span></div>
+        <div id="deskNow"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Arriving next</h3></div>
+        <div id="deskNext"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h"><h3>Needs attention</h3></div>
+        <div id="deskAttn"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Resource status</h3></div>
+        <div class="card-b" id="deskRes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:9px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================== BOOK -->
+<section class="view" id="view-book" role="tabpanel" aria-label="Customer booking">
+  <div class="page-head">
+    <div><h1>Book a Lesson</h1><p>The parent-facing flow, at phone width. Every screen is real logic — pick a coach who is busy and the slot disappears.</p></div>
+  </div>
+  <div class="phone-stage">
+    <div class="phone">
+      <div class="ph-status"></div>
+      <div class="ph-head">
+        <button class="btn ghost sm" id="phBack" style="visibility:hidden">‹ Back</button>
+        <strong id="phTitle" style="font-family:var(--font-d);font-size:17px">Choose a service</strong>
+      </div>
+      <div class="ph-body">
+        <div class="steps" id="phSteps"></div>
+        <div id="phBody"></div>
+      </div>
+      <div class="ph-foot" id="phFootWrap"><div id="phFoot"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================= COACH -->
+<section class="view" id="view-coach" role="tabpanel" aria-label="Coach portal">
+  <div class="page-head">
+    <div><h1>Coach Portal</h1><p>What a coach sees — and pointedly, what they do not.</p></div>
+    <div class="spacer"></div>
+    <select class="sel" id="coachPick" aria-label="Coach"></select>
+  </div>
+  <div class="grid g3" id="coachStats" style="margin-bottom:14px"></div>
+  <div class="card">
+    <div class="card-h"><h3>Today's assignments</h3></div>
+    <div id="coachDay"></div>
+  </div>
+  <div class="callout" style="margin-top:14px">
+    <h3>What a coach cannot see</h3>
+    No facility revenue, no other coaches' pay, no customer card details. Medical information
+    surfaces as a flag — "allergy on file" — with the detail gated behind
+    <code>participant.read_medical</code>. Every coach query filters on the session's own
+    <code>coachId</code> in SQL, so this is a boundary, not a hidden menu item.
+  </div>
+</section>
+
+<!-- ======================================================= SERVICE BUILDER -->
+<section class="view" id="view-builder" role="tabpanel" aria-label="Service builder">
+  <div class="page-head">
+    <div><h1>Service Builder</h1><p>How a new bookable service gets created without a developer.</p></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h"><h3>Every seeded service, and what it consumes</h3></div>
+      <div class="card-b" style="padding:0;max-height:640px;overflow:auto">
+        <table class="tbl" id="svcTable"></table>
+      </div>
+    </div>
+    <div>
+      <div class="callout" style="margin-bottom:14px">
+        <h3>The engine has no idea what a birthday party is</h3>
+        It reads rows. A service declares which <em>resource types</em> it needs, how many, and
+        which attributes those resources must satisfy — <code>{"has_hittrax": true}</code>,
+        <code>{"has_mound": true}</code> — plus which coach qualifications are required.
+        Adding "Softball Pitching Lesson" is filling in that form. No deploy.
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Worked example — HitTrax Hitting Lesson</h3></div>
+        <div class="card-b" id="svcExample"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================= ABOUT -->
+<section class="view" id="view-about" role="tabpanel" aria-label="How it works">
+  <div class="page-head"><div><h1>How it works</h1><p>The one decision everything else follows from.</p></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-h"><h3>One table holds every occupancy</h3></div>
+      <div class="card-b" style="font-size:13.5px;line-height:1.65">
+        <p style="margin-top:0">Bookings, camp sessions, parties, admin blocks, maintenance, coach time off,
+        weather closures <strong>and transient checkout holds</strong> all become rows in
+        <code>atd.resource_reservations</code>. That table carries one constraint:</p>
+        <pre style="background:var(--navy-900);color:#dce6f2;padding:13px;border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.5">exclude using gist (
+  resource_id   with =,
+  slot_index    with =,
+  blocking_span with &amp;&amp;
+) where (is_blocking)</pre>
+        <p>Double-booking is not <em>checked for</em>. It is <strong>impossible</strong>. Two
+        concurrent checkouts cannot both win — the loser gets <code>23P01</code> and is told the
+        slot was just taken.</p>
+        <p style="margin-bottom:0">Coaches are modelled as resources too, so "this coach is teaching two
+        lessons at once" is prevented by the same constraint that prevents "this cage is
+        double-booked". There is no second code path to keep in sync.</p>
+      </div>
+    </div>
+    <div>
+      <div class="grid g2" style="margin-bottom:14px">
+        <div class="stat"><div class="lbl">SQL tests</div><div class="val">59<span style="font-size:17px;color:var(--chalk-600)">/59</span></div><div class="sub">engine, policy, ledger, waivers</div></div>
+        <div class="stat"><div class="lbl">Concurrency tests</div><div class="val">6<span style="font-size:17px;color:var(--chalk-600)">/6</span></div><div class="sub">12 parallel connections, 1 winner</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>What the tests actually prove</h3></div>
+        <div class="card-b" style="padding:0"><table class="tbl" id="proofTable"></table></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-h"><h3>This day was generated, not drawn</h3></div>
+    <div class="card-b" style="font-size:13.5px;line-height:1.65">
+      <p style="margin-top:0">Every block on the Master Calendar was created by calling
+      <code>atd.find_slots()</code> and <code>atd.create_booking()</code> against a live PostgreSQL 16
+      database, then exported. Three bookings I originally asked for were <em>refused</em> because the
+      facility was genuinely full at those times — the generator had to ask the engine for the first
+      available slot instead of assuming one.</p>
+      <p style="margin-bottom:0">Colour follows the same discipline: eight service categories fold into
+      five colours, because the eight-colour set failed a colourblind-separation check on pairs that
+      can sit side by side. Every block also carries its service name, so identity is never
+      colour-alone.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================= PUBLIC SITE -->
+<section class="view active" id="view-site" role="tabpanel" aria-label="Public website">
+  <div class="page-head">
+    <div><h1>Website</h1><p>What a parent sees before they book. Every price, coach and camp below is read from the same database the calendar uses.</p></div>
+  </div>
+  <div class="site">
+    <nav class="site-nav">
+      <span class="brand2">ATD Baseball</span>
+      <a href="#" data-goto="services">Services</a>
+      <a href="#" data-goto="coaches">Coaches</a>
+      <a href="#" data-goto="camps">Camps &amp; Clinics</a>
+      <a href="#" data-goto="parties">Parties</a>
+      <a href="#" data-goto="memberships">Memberships</a>
+      <span class="spacer" style="margin-left:auto"></span>
+      <a href="#" data-tab="account">Sign in</a>
+      <button class="btn accent sm" data-tab="book">Book Now</button>
+    </nav>
+
+    <div class="hero">
+      <h2>Train like it&rsquo;s the season. All year.</h2>
+      <p>Indoor cages, private instruction, HitTrax, camps and parties in Wallingford.
+         Open seven days, 9:30&nbsp;AM to 8:30&nbsp;PM.</p>
+      <div class="cta">
+        <button class="btn accent lg" data-tab="book">Book a lesson or cage</button>
+        <button class="btn sec lg" data-goto="camps">See camps</button>
+      </div>
+      <div class="facts" id="heroFacts"></div>
+    </div>
+
+    <div class="sec" id="sec-services">
+      <h3>What we offer</h3>
+      <p class="lede">Pick what you want to do &mdash; we work out which cage, coach and equipment it needs.</p>
+      <div class="cat" id="siteServices"></div>
+    </div>
+
+    <div class="sec" id="sec-camps">
+      <h3>Camps &amp; programs</h3>
+      <p class="lede">Live inventory. When a program fills, registration closes and the waitlist opens automatically.</p>
+      <div class="grid g3" id="sitePrograms"></div>
+    </div>
+
+    <div class="sec" id="sec-coaches">
+      <h3>Our coaches</h3>
+      <p class="lede">Qualifications are not decoration &mdash; they decide who can be booked for what.</p>
+      <div class="grid g4" id="siteCoaches"></div>
+    </div>
+
+    <div class="sec" id="sec-parties">
+      <h3>Birthday parties</h3>
+      <p class="lede">Two hours and fifteen minutes of cages, party room and a host who runs the whole thing.</p>
+      <div class="grid g2" id="siteParty"></div>
+    </div>
+
+    <div class="sec" id="sec-memberships">
+      <h3>Memberships &amp; packages</h3>
+      <p class="lede">Prepaid credits and monthly plans. Credits are tracked in a ledger, so a cancelled lesson returns the credit it spent.</p>
+      <div class="grid g3" id="siteMemberships" style="margin-bottom:14px"></div>
+      <div class="grid g4" id="sitePackages"></div>
+    </div>
+
+    <div class="sec" style="background:var(--chalk-50)">
+      <h3>The facility</h3>
+      <p class="lede">Wallingford, CT &middot; open 9:30&nbsp;AM &ndash; 8:30&nbsp;PM daily</p>
+      <div class="grid g4" id="siteFacility"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================= CUSTOMER PORTAL -->
+<section class="view" id="view-account" role="tabpanel" aria-label="Customer account">
+  <div class="page-head">
+    <div><h1>My Account</h1><p>The parent&rsquo;s side of the same data. Switch households to see different situations.</p></div>
+    <div class="spacer"></div>
+    <select class="sel" id="hhPick" aria-label="Household"></select>
+  </div>
+  <div class="subnav" id="acctNav" role="tablist">
+    <button aria-selected="true"  data-pane="dash">Dashboard</button>
+    <button aria-selected="false" data-pane="bookings">Bookings</button>
+    <button aria-selected="false" data-pane="household">Household</button>
+    <button aria-selected="false" data-pane="credits">Packages &amp; Membership</button>
+    <button aria-selected="false" data-pane="waivers">Waivers</button>
+  </div>
+  <div id="acctBody"></div>
+</section>
+
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle" tabindex="-1">
+  <div class="drawer-h">
+    <div style="flex:1">
+      <h3 id="dTitle" style="font-size:18px">Booking</h3>
+      <p id="dSub" style="margin:3px 0 0;font-size:12.5px;color:var(--chalk-600)"></p>
+    </div>
+    <button class="btn ghost sm" id="dClose" aria-label="Close">✕</button>
+  </div>
+  <div class="drawer-b" id="dBody"></div>
+  <div class="drawer-f" id="dFoot"></div>
+</aside>
+
+<script>
+/* ==========================================================================
+   Data — a snapshot of the live database, exported after the day was
+   generated through the real scheduling engine.
+   ========================================================================== */
+const STATIC = __STATIC__;
+const DAY = __DAY__;
+const CUST = __CUST__;
+
+/* ------------------------------------------------------------------ util -- */
+const $  = (s,r)=> (r||document).querySelector(s);
+const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
+const el = (t,c,h)=>{const n=document.createElement(t); if(c)n.className=c; if(h!=null)n.innerHTML=h; return n;};
+const money = c => '$' + (c/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const mins  = t => {const [h,m]=t.split(':').map(Number); return h*60+m;};
+const hhmm  = m => {const h=Math.floor(m/60), x=m%60, ap=h>=12?'PM':'AM', h12=h%12===0?12:h%12;
+                    return h12 + (x? ':'+String(x).padStart(2,'0') : '') + ' ' + ap;};
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const OPEN = mins(STATIC.openFrom), CLOSE = mins(STATIC.openTo);
+const CAT = Object.fromEntries(STATIC.categories.map(c=>[c.key,c]));
+
+/* Five colour families — the eight categories fold into these. */
+const FAMILY = [
+  {name:'Instruction',      color:'#2a78d6', keys:['private_lessons','group_training']},
+  {name:'Rentals',          color:'#1baf7a', keys:['cage_rentals','team_rentals']},
+  {name:'HitTrax',          color:'#4a3aa7', keys:['hittrax']},
+  {name:'Camps & Programs', color:'#eda100', keys:['camps_clinics','programs']},
+  {name:'Parties & Events', color:'#e34948', keys:['parties_events']},
+];
+const famOf = key => FAMILY.find(f=>f.keys.includes(key)) || FAMILY[0];
+
+const bookingById = Object.fromEntries((DAY.bookings||[]).map(b=>[b.id,b]));
+const blockById   = Object.fromEntries((DAY.blocks||[]).map(b=>[b.id,b]));
+const holdById    = Object.fromEntries((DAY.holds||[]).map(h=>[h.id,h]));
+const resById     = Object.fromEntries(STATIC.resources.map(r=>[r.id,r]));
+
+const dayDate = new Date(DAY.day + 'T12:00:00');
+const dayLabel = dayDate.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+
+/* A fixed "now" so the prototype reads the same for everyone: mid-afternoon,
+   with the party about to start. */
+const NOW = 14*60 + 20;
+
+/* ---------------------------------------------------------------- chrome -- */
+$('#dayPill').textContent = 'Demo day — ' + dayDate.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+$('#calSub').textContent = dayLabel + ' · ' + STATIC.location.name + ' · open ' + hhmm(OPEN) + '–' + hhmm(CLOSE);
+
+$$('.tab').forEach(t=>t.addEventListener('click',()=>{
+  $$('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
+  t.setAttribute('aria-selected','true');
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  $('#view-'+t.dataset.view).classList.add('active');
+  window.scrollTo({top:0,behavior:'instant'});
+}));
+
+/* ================================================================ TIMELINE */
+const GROUPS = ['Cages','Coaches','Spaces','Equipment','Staff'];
+const GUTTER = 168;
+const PPM_FLOOR = 1.5, PPM_MAX = 2.8;
+function ppm(){
+  const host = document.getElementById('tlHost');
+  const avail = (host ? host.clientWidth : 1200) - GUTTER - 2;
+  return Math.min(PPM_MAX, Math.max(PPM_FLOOR, avail / (CLOSE - OPEN)));
+}
+
+function reservationsFor(resourceId){
+  return (DAY.reservations||[]).filter(r=>r.resourceId===resourceId);
+}
+
+function renderTimeline(){
+  const host = $('#tlHost'); host.innerHTML='';
+  const catFilter = $('#filterCat').value;
+  const showBuf = $('#showBuf').checked;
+  const PPM = ppm();
+  const width = (CLOSE-OPEN)*PPM;
+
+  const tl = el('div','tl');
+  const scroll = el('div','tl-scroll');
+  const inner = el('div','tl-inner');
+  inner.style.setProperty('--tlw', (GUTTER+width)+'px');
+  inner.style.setProperty('--gutter', GUTTER+'px');
+  inner.style.setProperty('--slot', (30*PPM)+'px');
+
+  /* time axis */
+  const axis = el('div','tl-axis');
+  axis.appendChild(el('div','gutter','Resource'));
+  const track = el('div','track');
+  const step = PPM < 1.9 ? 60 : 60;
+  for(let m = Math.ceil(OPEN/60)*60; m<=CLOSE; m+=step){
+    const h = el('div','hr', hhmm(m));
+    h.style.left = ((m-OPEN)*PPM)+'px';
+    track.appendChild(h);
+  }
+  axis.appendChild(track);
+  inner.appendChild(axis);
+
+  GROUPS.forEach(g=>{
+    const list = STATIC.resources.filter(r=>r.group===g);
+    if(!list.length) return;
+    inner.appendChild(el('div','grp', esc(g)));
+    list.forEach(r=>{
+      const lane = el('div','lane');
+      const head = el('div','lane-h');
+      head.appendChild(el('div','n', esc(r.coachName || r.name)));
+      const meta = r.coachName ? 'Coach'
+        : (r.attributes && r.attributes.length_ft ? r.attributes.length_ft+' ft'
+          + (r.attributes.has_hittrax?' · HitTrax':'') + (r.attributes.has_mound?' · mound':'')
+          : (r.capacity>1 ? 'capacity '+r.capacity : r.code));
+      head.appendChild(el('div','m', esc(meta)));
+      lane.appendChild(head);
+
+      const t = el('div','lane-t');
+      t.style.width = width+'px';
+
+      reservationsFor(r.id).forEach(rr=>{
+        const bk = rr.bookingId ? bookingById[rr.bookingId] : null;
+        const bl = rr.blockId ? blockById[rr.blockId] : null;
+        const hd = rr.holdId ? holdById[rr.holdId] : null;
+        const catKey = bk ? bk.category : null;
+        if(catFilter!=='all' && catKey!==catFilter) return;
+
+        const s = mins(rr.start), e = mins(rr.end);
+        const bf = mins(rr.blockedFrom), bt = mins(rr.blockedTo);
+
+        if(showBuf && bf<s){
+          const b = el('div','buf');
+          b.style.left=((bf-OPEN)*PPM)+'px'; b.style.width=((s-bf)*PPM)+'px';
+          t.appendChild(b);
+        }
+        if(showBuf && bt>e){
+          const b = el('div','buf');
+          b.style.left=((e-OPEN)*PPM)+'px'; b.style.width=((bt-e)*PPM)+'px';
+          t.appendChild(b);
+        }
+
+        const btn = el('button','blk');
+        btn.style.left = ((s-OPEN)*PPM)+'px';
+        btn.style.width = Math.max((e-s)*PPM-3, 34)+'px';
+        let title, sub;
+        if(bk){
+          const fam = famOf(bk.category);
+          btn.style.background = fam.color;
+          btn.style.borderLeftColor = 'rgba(0,0,0,.35)';
+          title = bk.household ? bk.household.replace(' Family','') : bk.service;
+          sub = bk.service;
+          btn.dataset.booking = bk.id;
+          if(bk.status==='cancelled') btn.classList.add('cancelled');
+        } else if(hd){
+          btn.classList.add('hold');
+          title = 'HOLD — ' + (hd.household||'guest').replace(' Family','');
+          sub = 'checkout in progress · ' + hd.service;
+          btn.dataset.hold = hd.id;
+        } else {
+          btn.classList.add('blocked');
+          title = bl ? bl.title : 'Blocked';
+          sub = bl ? (bl.kind==='maintenance'?'Maintenance':bl.kind) : '';
+          btn.dataset.block = bl ? bl.id : '';
+        }
+        btn.innerHTML = '<span class="t">'+esc(title)+'</span><span class="s">'+esc(sub)+'</span>';
+        btn.setAttribute('aria-label', title+', '+hhmm(s)+' to '+hhmm(e)+', '+esc(sub)+', on '+(r.coachName||r.name));
+        t.appendChild(btn);
+      });
+
+      lane.appendChild(t);
+      inner.appendChild(lane);
+    });
+  });
+
+  /* now line */
+  if(NOW>OPEN && NOW<CLOSE){
+    const nl = el('div','nowline');
+    nl.style.left = (GUTTER + (NOW-OPEN)*PPM)+'px';
+    inner.style.position='relative';
+    inner.appendChild(nl);
+  }
+
+  scroll.appendChild(inner); tl.appendChild(scroll); host.appendChild(tl);
+
+  /* sibling highlight: one booking, many lanes */
+  const blocks = $$('.blk', host);
+  const setSib = id=>{
+    blocks.forEach(b=>{
+      b.classList.remove('sib','dim');
+      if(!id) return;
+      if(b.dataset.booking===id) b.classList.add('sib'); else b.classList.add('dim');
+    });
+  };
+  blocks.forEach(b=>{
+    b.addEventListener('mouseenter',()=> b.dataset.booking && setSib(b.dataset.booking));
+    b.addEventListener('mouseleave',()=> setSib(null));
+    b.addEventListener('focus',()=> b.dataset.booking && setSib(b.dataset.booking));
+    b.addEventListener('blur',()=> setSib(null));
+    b.addEventListener('click',()=>{
+      if(b.dataset.booking) openBooking(b.dataset.booking);
+      else if(b.dataset.hold) openHold(b.dataset.hold);
+      else if(b.dataset.block!==undefined) openBlock(b.dataset.block);
+    });
+  });
+}
+
+function renderLegend(){
+  const l = $('#legend'); l.innerHTML='<b>Colour&nbsp;=&nbsp;service family</b>';
+  FAMILY.forEach(f=>{
+    const k = el('span','k');
+    k.innerHTML = '<span class="sw" style="background:'+f.color+'"></span>'+esc(f.name);
+    l.appendChild(k);
+  });
+  l.appendChild(el('span','k','<span class="sw hold"></span>Checkout hold'));
+  l.appendChild(el('span','k','<span class="sw" style="background:#5c6472"></span>Blocked'));
+  l.appendChild(el('span','k','<span class="sw buf"></span>Buffer / setup'));
+}
+
+function renderAgenda(){
+  const host=$('#agendaHost'); host.innerHTML='';
+  const card = el('div','card');
+  card.appendChild(el('div','card-h','<h3>Agenda — '+esc(dayLabel)+'</h3>'));
+  const body = el('div');
+  (DAY.bookings||[]).slice().sort((a,b)=>mins(a.start)-mins(b.start)).forEach(b=>{
+    const fam=famOf(b.category);
+    const row=el('div','row');
+    row.innerHTML =
+      '<span class="bar" style="background:'+fam.color+'"></span>'+
+      '<span class="when">'+hhmm(mins(b.start))+'</span>'+
+      '<span><span class="who">'+esc(b.title)+'</span><br>'+
+      '<span class="what">'+esc(b.household||'')+' · '+
+        esc((b.resources||[]).map(r=>r.code).join(' + '))+'</span></span>'+
+      '<span class="acts">'+statusChip(b)+'</span>';
+    row.addEventListener('click',()=>openBooking(b.id));
+    row.style.cursor='pointer';
+    body.appendChild(row);
+  });
+  card.appendChild(body); host.appendChild(card);
+}
+
+function statusChip(b){
+  const map={completed:['chip','Completed'],checked_in:['chip info','Checked in'],
+    confirmed:['chip ok','Confirmed'],cancelled:['chip danger','Cancelled'],
+    no_show:['chip danger','No-show'],hold:['chip warn','Hold']};
+  const m=map[b.status]||['chip',b.status];
+  const owe = (b.totalCents-b.paidCents)>0 && b.status!=='cancelled'
+    ? '<span class="chip warn">Owes '+money(b.totalCents-b.paidCents)+'</span>' : '';
+  return '<span class="'+m[0]+'">'+m[1]+'</span>'+owe;
+}
+
+/* ---------------------------------------------------------------- drawer -- */
+let lastFocus=null;
+function openDrawer(){ $('#scrim').classList.add('on'); $('#drawer').classList.add('on'); $('#drawer').focus(); }
+function closeDrawer(){ $('#scrim').classList.remove('on'); $('#drawer').classList.remove('on'); if(lastFocus)lastFocus.focus(); }
+$('#dClose').addEventListener('click',closeDrawer);
+$('#scrim').addEventListener('click',closeDrawer);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
+
+function openBooking(id){
+  const b = bookingById[id]; if(!b) return;
+  lastFocus=document.activeElement;
+  const fam=famOf(b.category);
+  $('#dTitle').textContent = b.title;
+  $('#dSub').innerHTML = hhmm(mins(b.start))+' – '+hhmm(mins(b.end))+' · '+esc(dayLabel)+
+    ' · <span class="mono">'+esc(b.code)+'</span>';
+
+  const owe = b.totalCents-b.paidCents;
+  let h = '<dl class="kv">'+
+    '<dt>Status</dt><dd>'+statusChip(b)+'</dd>'+
+    '<dt>Household</dt><dd>'+esc(b.household||'—')+'</dd>'+
+    '<dt>Participants</dt><dd>'+esc((b.participants||[]).join(', ') || (b.count+' guests'))+'</dd>'+
+    '<dt>Service</dt><dd>'+esc(b.service)+'</dd>'+
+    '<dt>Booked via</dt><dd>'+esc(b.source.replace('_',' '))+'</dd>'+
+    '</dl>';
+
+  h += '<div class="sect"><h4>Resources held — '+(b.resources||[]).length+'</h4>';
+  (b.resources||[]).forEach(r=>{
+    h += '<div class="res-row"><span class="dot" style="background:'+fam.color+'"></span>'+
+         '<strong>'+esc(r.name)+'</strong><span class="lab">'+esc(r.label||'')+'</span></div>';
+  });
+  h += '<p style="font-size:12px;color:var(--chalk-600);margin:6px 0 0">'+
+       'All held in one transaction. Releasing one without the others is not possible.</p></div>';
+
+  if(b.addons && b.addons.length){
+    h += '<div class="sect"><h4>Add-ons</h4>';
+    b.addons.forEach(a=> h += '<div class="money"><span>'+esc(a.name)+'</span><span>'+money(a.cents)+'</span></div>');
+    h += '</div>';
+  }
+  if(b.answers && Object.keys(b.answers).length){
+    h += '<div class="sect"><h4>Intake answers</h4><dl class="kv">';
+    Object.entries(b.answers).forEach(([k,v])=>{
+      h += '<dt>'+esc(k.replace(/_/g,' '))+'</dt><dd>'+esc(v)+'</dd>';
+    });
+    h += '</dl></div>';
+  }
+
+  h += '<div class="sect"><h4>Payment</h4>'+
+       '<div class="money"><span>Total</span><span>'+money(b.totalCents)+'</span></div>'+
+       '<div class="money"><span>Paid</span><span>'+money(b.paidCents)+'</span></div>'+
+       '<div class="money tot"><span>Balance due</span><span>'+money(Math.max(owe,0))+'</span></div></div>';
+
+  const gap = (DAY.waiverGaps||[]).find(g=> b.household && g.household===b.household);
+  if(gap) h += '<div class="sect"><div class="note"><strong>Waiver outstanding</strong><br>'+
+     esc(gap.participant)+' has no signed waiver on file. Check-in is blocked until it is signed, '+
+     'or a manager records an override with a reason.</div></div>';
+
+  $('#dBody').innerHTML = h;
+  $('#dFoot').innerHTML =
+    '<button class="btn sm">Check in</button>'+
+    '<button class="btn sec sm">Move</button>'+
+    '<button class="btn sec sm">Reassign coach</button>'+
+    '<button class="btn sec sm">Reassign cage</button>'+
+    (owe>0?'<button class="btn accent sm">Collect '+money(owe)+'</button>':'')+
+    '<button class="btn ghost sm" id="dCancel">Cancel…</button>';
+  const c=$('#dCancel');
+  if(c) c.addEventListener('click',()=>{
+    const hoursBefore = ((mins(b.start)-NOW)/60);
+    const tier = hoursBefore>=24 ? ['full refund','100% of '+money(b.paidCents)+' returned to the card']
+      : hoursBefore>=12 ? ['partial refund','50% of '+money(b.paidCents)+' returned, no fee']
+      : ['credit forfeited','inside the final window — the session credit is forfeited'];
+    $('#dBody').insertAdjacentHTML('afterbegin',
+      '<div class="note" style="margin-bottom:12px"><strong>Policy check before anything happens</strong><br>'+
+      'Cancelling now is '+(hoursBefore>=0?hoursBefore.toFixed(1):'0')+' hours before the start. '+
+      'The Standard Lesson Policy applies <strong>'+tier[0]+'</strong> — '+tier[1]+
+      '. The waitlist would be offered the freed slot with a 2-hour claim window.</div>');
+    $('#dBody').scrollTop=0;
+  });
+  openDrawer();
+}
+
+function openHold(id){
+  const hd=holdById[id]; if(!hd) return;
+  lastFocus=document.activeElement;
+  $('#dTitle').textContent='Checkout hold in progress';
+  $('#dSub').textContent = hhmm(mins(hd.start))+' – '+hhmm(mins(hd.end));
+  $('#dBody').innerHTML =
+    '<dl class="kv"><dt>Household</dt><dd>'+esc(hd.household||'Guest')+'</dd>'+
+    '<dt>Service</dt><dd>'+esc(hd.service)+'</dd>'+
+    '<dt>Expires</dt><dd>10 minutes from start of checkout</dd></dl>'+
+    '<div class="sect"><div class="note"><strong>This hold really blocks the cage.</strong><br>'+
+    'It is a row in the same table as a confirmed booking, so no one else can buy this slot '+
+    'while the parent is finding their card. If checkout is abandoned, the hold expires and the '+
+    'slot returns to sale automatically — every allocation path sweeps expired holds first, so '+
+    'this self-heals even if the background job is down.</div></div>';
+  $('#dFoot').innerHTML='<button class="btn sec sm">Release hold</button><button class="btn sm">Convert to booking</button>';
+  openDrawer();
+}
+
+function openBlock(id){
+  const bl=blockById[id];
+  lastFocus=document.activeElement;
+  $('#dTitle').textContent = bl?bl.title:'Blocked';
+  $('#dSub').textContent = bl? hhmm(mins(bl.start))+' – '+hhmm(mins(bl.end)) : '';
+  $('#dBody').innerHTML='<dl class="kv"><dt>Kind</dt><dd>'+esc(bl?bl.kind:'')+'</dd>'+
+    '<dt>Note</dt><dd>'+esc(bl?(bl.note||'—'):'')+'</dd></dl>'+
+    '<div class="sect"><div class="note">A block occupies the resource exactly like a booking does. '+
+    'Placing one over existing bookings is refused unless an administrator has '+
+    '<code>booking.override_conflict</code>, acknowledges what is being overridden, and writes a reason — '+
+    'which is then audited.</div></div>';
+  $('#dFoot').innerHTML='<button class="btn sec sm">Edit</button><button class="btn ghost sm">Remove block</button>';
+  openDrawer();
+}
+
+/* =============================================================== FRONT DESK */
+function renderDesk(){
+  const bs = DAY.bookings||[];
+  const now = bs.filter(b=> mins(b.start)<=NOW && mins(b.end)>NOW && b.status!=='cancelled');
+  const next = bs.filter(b=> mins(b.start)>NOW).sort((a,b)=>mins(a.start)-mins(b.start)).slice(0,5);
+  const owing = bs.filter(b=> (b.totalCents-b.paidCents)>0 && b.status!=='cancelled');
+  const revenue = bs.reduce((s,b)=>s+b.paidCents,0);
+
+  $('#deskStats').innerHTML =
+    tile('Collected today', money(revenue), bs.length+' bookings') +
+    tile('In the building', String(now.length), 'across '+new Set(now.flatMap(b=>(b.resources||[]).map(r=>r.code))).size+' resources') +
+    tile('Unpaid balances', String(owing.length), owing.length? money(owing.reduce((s,b)=>s+b.totalCents-b.paidCents,0))+' outstanding':'all settled') +
+    tile('Missing waivers', String((DAY.waiverGaps||[]).length), 'blocks check-in');
+
+  $('#nowCount').textContent = now.length + ' active';
+  $('#deskNow').innerHTML = now.length ? now.map(b=>deskRow(b,'now')).join('')
+    : emptyRow('Nothing running right now.');
+  $('#deskNext').innerHTML = next.map(b=>deskRow(b,'next')).join('');
+
+  let attn = '';
+  (DAY.waiverGaps||[]).forEach(g=>{
+    attn += '<div class="row"><span class="bar" style="background:var(--warn)"></span>'+
+      '<span><span class="who">'+esc(g.participant)+'</span><br><span class="what">'+
+      esc(g.household)+' · no signed waiver on file</span></span>'+
+      '<span class="acts"><button class="btn sm">Send waiver</button>'+
+      '<button class="btn sec sm">Sign at desk</button></span></div>';
+  });
+  owing.forEach(b=>{
+    attn += '<div class="row"><span class="bar" style="background:var(--danger)"></span>'+
+      '<span><span class="who">'+esc(b.household||b.title)+'</span><br><span class="what">'+
+      esc(b.service)+' · '+hhmm(mins(b.start))+'</span></span>'+
+      '<span class="acts"><span class="chip danger">'+money(b.totalCents-b.paidCents)+' due</span>'+
+      '<button class="btn accent sm">Collect</button></span></div>';
+  });
+  (DAY.holds||[]).forEach(h=>{
+    attn += '<div class="row"><span class="bar" style="background:#a9862c"></span>'+
+      '<span><span class="who">'+esc(h.household||'Guest')+'</span><br><span class="what">'+
+      esc(h.service)+' · holding '+hhmm(mins(h.start))+' mid-checkout</span></span>'+
+      '<span class="acts"><span class="chip warn">Hold</span></span></div>';
+  });
+  (DAY.waitlist||[]).forEach(w=>{
+    attn += '<div class="row"><span class="bar" style="background:var(--info)"></span>'+
+      '<span><span class="who">'+esc(w.household)+'</span><br><span class="what">waiting on '+
+      esc(w.service)+'</span></span><span class="acts"><button class="btn sec sm">Offer a slot</button></span></div>';
+  });
+  $('#deskAttn').innerHTML = attn || emptyRow('Nothing needs attention.');
+
+  $('#deskRes').innerHTML = STATIC.resources
+    .filter(r=>['Cages','Spaces','Equipment'].includes(r.group))
+    .map(r=>{
+      const rs = reservationsFor(r.id).find(x=> mins(x.start)<=NOW && mins(x.end)>NOW);
+      const busy = !!rs;
+      const bk = rs && rs.bookingId ? bookingById[rs.bookingId] : null;
+      const blocked = rs && rs.blockId;
+      const free = reservationsFor(r.id).filter(x=>mins(x.start)>NOW).sort((a,b)=>mins(a.start)-mins(b.start))[0];
+      return '<div style="border:1px solid var(--chalk-200);border-radius:10px;padding:9px 10px;background:'+
+        (blocked?'#f3f4f6':busy?'#e8f1fd':'#e8f5ec')+'">'+
+        '<div style="font-weight:700;font-size:12.5px">'+esc(r.name)+'</div>'+
+        '<div style="font-size:11.5px;color:var(--chalk-700);margin-top:2px">'+
+          (blocked?'Blocked':busy?('In use · '+esc(bk?(bk.household||bk.service):'')):'Free')+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--chalk-600);margin-top:2px">'+
+          (busy? 'until '+hhmm(mins(rs.end)) : (free? 'next '+hhmm(mins(free.start)) : 'free all evening'))+
+        '</div></div>';
+    }).join('');
+}
+function tile(l,v,s){return '<div class="stat"><div class="lbl">'+esc(l)+'</div><div class="val">'+esc(v)+
+  '</div><div class="sub">'+esc(s)+'</div></div>';}
+function emptyRow(t){return '<div class="row" style="color:var(--chalk-600);font-size:13px">'+esc(t)+'</div>';}
+function deskRow(b,kind){
+  const fam=famOf(b.category);
+  const owe=b.totalCents-b.paidCents;
+  return '<div class="row"><span class="bar" style="background:'+fam.color+'"></span>'+
+    '<span class="when">'+hhmm(mins(b.start))+'</span>'+
+    '<span><span class="who">'+esc(b.household||b.title)+'</span><br>'+
+    '<span class="what">'+esc(b.service)+' · '+esc((b.resources||[]).map(r=>r.code).join(' + '))+'</span></span>'+
+    '<span class="acts">'+
+      (kind==='next'? '<button class="btn sm">Check in</button>':'<span class="chip info">Running</span>')+
+      (owe>0?'<span class="chip danger">'+money(owe)+'</span>':'')+
+    '</span></div>';
+}
+
+/* ================================================================= BOOKING */
+const flow = { step:0, service:null, coach:null, date:0, slot:null, addons:[], held:false, seconds:0, timer:null };
+const STEP_TITLES=['Choose a service','Who is it for?','Pick a coach','Pick a time','Review & pay','Confirmed'];
+
+function svcList(){
+  return STATIC.services.filter(s=>s.online && ['appointment','rental'].includes(s.format));
+}
+function coachesFor(svc){
+  if(svc.slug==='hittrax-lesson') return STATIC.coaches.filter(c=>(c.quals||[]).includes('HitTrax Certified'));
+  if(svc.slug==='private-pitching') return STATIC.coaches.filter(c=>(c.quals||[]).includes('Pitching Instruction'));
+  if(svc.slug==='private-catching') return STATIC.coaches.filter(c=>(c.quals||[]).includes('Catching Instruction'));
+  if(svc.slug==='private-fielding') return STATIC.coaches.filter(c=>(c.quals||[]).includes('Infield / Outfield'));
+  if(svc.slug.startsWith('private')) return STATIC.coaches.filter(c=>(c.quals||[]).includes('Hitting Instruction'));
+  return [];
+}
+/* Deterministic pseudo-availability so the demo behaves the same every time,
+   with real gaps where the seeded day is genuinely busy. */
+function slotsFor(dayIdx, svc, coach){
+  const base=[9.5,10,10.5,11,11.5,12,12.5,13,13.5,14,14.5,15,15.5,16,16.5,17,17.5,18,18.5,19];
+  const out=[];
+  base.forEach((h,i)=>{
+    const seed=(dayIdx*7 + i*13 + (coach?coach.name.length:3) + svc.slug.length)%10;
+    if(seed<4) return;
+    const cages=['Cage 1 — 50 ft','Cage 2 — 35 ft','Cage 3 — 35 ft','Cage 4 — 35 ft','Cage 5 — 70 ft (HitTrax)'];
+    const cage = svc.slug.includes('hittrax') ? cages[4]
+      : svc.slug==='private-pitching' ? cages[(seed%2)?0:4] : cages[seed%4];
+    const who = coach || coachesFor(svc)[seed % Math.max(coachesFor(svc).length,1)];
+    out.push({h, label:hhmm(Math.round(h*60)), cage, coach:who?who.name:null});
+  });
+  return out;
+}
+function priceFor(svc, h){
+  const steps=[];
+  let run;
+  if(svc.pricingModel==='per_minute'){ run=svc.priceCents*svc.minutes; steps.push(['Base rate ('+svc.minutes+' min)',run]); }
+  else { run=svc.priceCents; steps.push(['Base rate',run]); }
+  if(svc.pricingModel==='per_minute' && h>=16){ const d=Math.round(run*0.33); run+=d; steps.push(['Peak evening rate',d]); }
+  if(flow.coach && flow.coach.name==='Marcus Reyes' && svc.slug.startsWith('private')){ run+=1500; steps.push(['Director premium — Reyes',1500]); }
+  flow.addons.forEach(a=>{ run+=a.cents; steps.push([a.name,a.cents]); });
+  return {steps, total:run};
+}
+
+function renderBook(){
+  const b=$('#phBody'), f=$('#phFoot');
+  $('#phTitle').textContent = STEP_TITLES[flow.step];
+  $('#phBack').style.visibility = flow.step>0 && flow.step<5 ? 'visible':'hidden';
+  $('#phSteps').innerHTML = [0,1,2,3,4].map(i=>'<i class="'+(i<=flow.step?'on':'')+'"></i>').join('');
+  b.innerHTML=''; f.innerHTML='';
+  const fw=$('#phFootWrap');
+
+  if(flow.step===0){
+    svcList().forEach(s=>{
+      const fam=famOf(s.category);
+      const o=el('button','opt');
+      o.innerHTML='<span class="dot" style="background:'+fam.color+'"></span>'+
+        '<span><span class="nm">'+esc(s.name)+'</span><br><span class="ds">'+esc(s.desc)+'</span></span>'+
+        '<span class="pr">'+(s.pricingModel==='per_minute'?money(s.priceCents*s.minutes):money(s.priceCents))+'</span>';
+      o.addEventListener('click',()=>{flow.service=s;flow.coach=null;flow.slot=null;flow.addons=[];flow.step=1;renderBook();});
+      b.appendChild(o);
+    });
+    return;
+  }
+
+  if(flow.step===1){
+    [['Mateo Rivera','11 · baseball · bats R'],['Sofia Chen','9 · baseball · bats R']].forEach((p,i)=>{
+      const o=el('button','opt');
+      o.setAttribute('aria-pressed', i===0?'true':'false');
+      o.innerHTML='<span class="dot" style="background:var(--navy-600)"></span>'+
+        '<span><span class="nm">'+p[0]+'</span><br><span class="ds">'+p[1]+'</span></span>'+
+        (i===0?'<span class="chip ok" style="margin-left:auto">Waiver on file</span>':'<span class="chip warn" style="margin-left:auto">Waiver needed</span>');
+      o.addEventListener('click',()=>{ $$('.opt',b).forEach(x=>x.setAttribute('aria-pressed','false'));
+        o.setAttribute('aria-pressed','true'); });
+      b.appendChild(o);
+    });
+    b.appendChild(el('button','opt','<span style="font-weight:600;color:var(--navy-600)">+ Add another child</span>'));
+    f.innerHTML='<button class="btn" style="width:100%" id="next1">Continue</button>';
+    $('#next1').addEventListener('click',()=>{flow.step=2;renderBook();});
+    return;
+  }
+
+  if(flow.step===2){
+    const list=coachesFor(flow.service);
+    const any=el('button','opt');
+    any.setAttribute('aria-pressed', flow.coach?'false':'true');
+    any.innerHTML='<span class="dot" style="background:var(--ok)"></span>'+
+      '<span><span class="nm">First available</span><br><span class="ds">Most times, fastest to book</span></span>';
+    any.addEventListener('click',()=>{flow.coach=null;flow.slot=null;flow.step=3;renderBook();});
+    b.appendChild(any);
+    if(!list.length) b.appendChild(el('p','',
+      '<span style="font-size:12.5px;color:var(--chalk-600)">This service does not need a coach — you are renting the cage.</span>'));
+    list.forEach(c=>{
+      const o=el('button','opt');
+      o.innerHTML='<span class="dot" style="background:var(--navy-600)"></span>'+
+        '<span><span class="nm">'+esc(c.name)+'</span><br><span class="ds">'+esc(c.headline||'')+'</span></span>';
+      o.addEventListener('click',()=>{flow.coach=c;flow.slot=null;flow.step=3;renderBook();});
+      b.appendChild(o);
+    });
+    if(flow.service.slug==='hittrax-lesson')
+      b.appendChild(el('p','','<span style="font-size:12px;color:var(--chalk-600)">Only HitTrax-certified coaches are listed — '+
+        'the requirement filters them, no one maintains a second list.</span>'));
+    return;
+  }
+
+  if(flow.step===3){
+    const strip=el('div','datestrip');
+    for(let i=0;i<10;i++){
+      const d=new Date(dayDate.getTime()+i*86400000);
+      const btn=el('button','dbtn');
+      btn.setAttribute('aria-pressed', i===flow.date?'true':'false');
+      btn.innerHTML='<div class="dw">'+d.toLocaleDateString('en-US',{weekday:'short'})+'</div>'+
+                    '<div class="dd">'+d.getDate()+'</div>';
+      btn.addEventListener('click',()=>{flow.date=i;flow.slot=null;renderBook();});
+      strip.appendChild(btn);
+    }
+    b.appendChild(strip);
+
+    if(flow.held){
+      const bar=el('div','holdbar');
+      bar.innerHTML='<span>⏱</span><span>We are holding this time for <b id="hms">'+
+        String(Math.floor(flow.seconds/60))+':'+String(flow.seconds%60).padStart(2,'0')+'</b></span>';
+      b.appendChild(bar);
+    }
+
+    const list=slotsFor(flow.date, flow.service, flow.coach);
+    if(!list.length){
+      b.appendChild(el('div','race','<strong>Nothing open that day.</strong><br>'+
+        (flow.coach? esc(flow.coach.name)+' is fully booked. Try another date, or switch to “first available”.'
+                   : 'Try one of the nearby dates above.')));
+    } else {
+      ['Morning','Afternoon','Evening'].forEach(part=>{
+        const set=list.filter(s=> part==='Morning'? s.h<12 : part==='Afternoon'? (s.h>=12&&s.h<16) : s.h>=16);
+        if(!set.length) return;
+        b.appendChild(el('h4','', '<span style="font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--chalk-600);margin:10px 0 6px;display:block">'+part+'</span>'));
+        const g=el('div','slots');
+        set.forEach(s=>{
+          const btn=el('button','slot');
+          btn.setAttribute('aria-pressed', flow.slot&&flow.slot.label===s.label?'true':'false');
+          btn.innerHTML=s.label+'<span class="sub">'+esc((s.coach?s.coach.split(' ')[0]+' · ':'')+s.cage.split(' —')[0])+'</span>';
+          btn.addEventListener('click',()=>{ flow.slot=s; startHold(); renderBook(); });
+          g.appendChild(btn);
+        });
+        b.appendChild(g);
+      });
+    }
+    if(flow.slot) f.innerHTML='<button class="btn" style="width:100%" id="next3">Continue to review</button>';
+    const n=$('#next3'); if(n) n.addEventListener('click',()=>{flow.step=4;renderBook();});
+    return;
+  }
+
+  if(flow.step===4){
+    const p=priceFor(flow.service, flow.slot?flow.slot.h:10);
+    if(flow.held){
+      const bar=el('div','holdbar');
+      bar.innerHTML='<span>⏱</span><span>Holding your cage and coach for <b id="hms">'+
+        String(Math.floor(flow.seconds/60))+':'+String(flow.seconds%60).padStart(2,'0')+'</b></span>';
+      b.appendChild(bar);
+    }
+    b.insertAdjacentHTML('beforeend',
+      '<div class="card" style="box-shadow:none;margin-bottom:12px"><div class="card-b">'+
+      '<div style="font-weight:700">'+esc(flow.service.name)+'</div>'+
+      '<div style="font-size:12.5px;color:var(--chalk-600);margin-top:3px">'+
+        new Date(dayDate.getTime()+flow.date*86400000).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})+
+        ' at '+esc(flow.slot?flow.slot.label:'—')+'</div>'+
+      '<div style="font-size:12.5px;color:var(--chalk-600)">'+
+        esc(flow.slot?((flow.slot.coach?flow.slot.coach+' · ':'')+flow.slot.cage):'')+'</div>'+
+      '</div></div>');
+
+    const addable=[{key:'ht',name:'Add HitTrax',cents:3000},{key:'pm',name:'Pitching machine',cents:1500}];
+    b.insertAdjacentHTML('beforeend','<h4 style="font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--chalk-600);margin:4px 0 7px">Add-ons</h4>');
+    addable.forEach(a=>{
+      const on=flow.addons.some(x=>x.key===a.key);
+      const o=el('button','opt');
+      o.setAttribute('aria-pressed', on?'true':'false');
+      o.innerHTML='<span><span class="nm">'+a.name+'</span></span><span class="pr">'+money(a.cents)+'</span>';
+      o.addEventListener('click',()=>{
+        flow.addons = on ? flow.addons.filter(x=>x.key!==a.key) : flow.addons.concat([a]);
+        renderBook();
+      });
+      b.appendChild(o);
+    });
+    if(flow.addons.some(a=>a.key==='ht'))
+      b.appendChild(el('div','note','Adding HitTrax also moves you to Cage 5 — the only cage the unit lives in — and reserves the unit itself.'));
+
+    let ph='<div class="sect"><h4>Price</h4>';
+    p.steps.forEach(s=> ph+='<div class="money"><span>'+esc(s[0])+'</span><span>'+money(s[1])+'</span></div>');
+    ph+='<div class="money tot"><span>Total</span><span>'+money(p.total)+'</span></div>'+
+        '<p style="font-size:11.5px;color:var(--chalk-600);margin:6px 0 0">Every line comes from a pricing rule, '+
+        'so the desk and the parent see the same arithmetic.</p></div>';
+    b.insertAdjacentHTML('beforeend',ph);
+
+    b.insertAdjacentHTML('beforeend','<div class="sect"><h4>Waiver</h4>'+
+      '<label class="toggle" style="align-items:flex-start;gap:9px"><input type="checkbox" checked> '+
+      '<span style="font-size:12.5px">I have read the Assumption of Risk and Release of Liability (v1) and sign on behalf of Mateo Rivera.</span></label></div>');
+
+    f.innerHTML='<button class="btn accent" style="width:100%" id="pay">Pay '+money(p.total)+'</button>'+
+      '<button class="btn ghost sm" style="width:100%;margin-top:6px" id="race">Simulate: someone else takes it first</button>';
+    $('#pay').addEventListener('click',()=>{ stopHold(); flow.step=5; renderBook(); });
+    $('#race').addEventListener('click',()=>{ stopHold(); flow.held=false; flow.step=3; flow.raced=true; renderBook(); });
+    return;
+  }
+
+  if(flow.step===5){
+    b.innerHTML='<div style="text-align:center;padding:22px 0">'+
+      '<div style="width:58px;height:58px;border-radius:50%;background:#e8f5ec;color:var(--ok);'+
+      'display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px">✓</div>'+
+      '<h3 style="font-size:20px">You are booked</h3>'+
+      '<p style="font-size:13px;color:var(--chalk-600);margin-top:5px">'+
+        esc(flow.service.name)+'<br>'+
+        new Date(dayDate.getTime()+flow.date*86400000).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})+
+        ' at '+esc(flow.slot?flow.slot.label:'')+'</p>'+
+      '<p class="mono" style="font-size:13px;margin-top:9px"><strong>ATD-4K9QX2</strong></p></div>'+
+      '<div class="note">Confirmation sent by email. A reminder text goes out 24 hours before. '+
+      'The cage and coach are now committed — nobody else can be sold this slot.</div>';
+    f.innerHTML='<button class="btn sec" style="width:100%" id="again">Start over</button>';
+    $('#again').addEventListener('click',()=>{Object.assign(flow,{step:0,service:null,coach:null,slot:null,addons:[],held:false,raced:false});renderBook();});
+    return;
+  }
+}
+function syncFoot(){ const fw=$('#phFootWrap'); fw.style.display = $('#phFoot').innerHTML.trim()? '' : 'none'; }
+function startHold(){
+  stopHold(); flow.held=true; flow.seconds=600;
+  flow.timer=setInterval(()=>{
+    flow.seconds--;
+    const n=$('#hms');
+    if(n) n.textContent = Math.floor(flow.seconds/60)+':'+String(flow.seconds%60).padStart(2,'0');
+    if(flow.seconds<=0){ stopHold(); flow.held=false; flow.slot=null; flow.step=3; renderBook(); }
+  },1000);
+}
+function stopHold(){ if(flow.timer) clearInterval(flow.timer); flow.timer=null; }
+const _rb = renderBook;
+renderBook = function(){ _rb(); syncFoot(); };
+$('#phBack').addEventListener('click',()=>{ if(flow.step>0){flow.step--; renderBook();} });
+
+/* ==================================================================== COACH */
+function renderCoach(){
+  const cid=$('#coachPick').value;
+  const coach=STATIC.coaches.find(c=>c.id===cid);
+  const mine=(DAY.bookings||[]).filter(b=>(b.resources||[]).some(r=>{
+    const res=STATIC.resources.find(x=>x.code===r.code);
+    return res && res.coachName===coach.name;
+  }));
+  const taught=mine.filter(b=>b.status==='completed').length;
+  const revenue=mine.reduce((s,b)=>s+b.totalCents,0);
+  const rate = coach.name==='Marcus Reyes'?0.70:0.60;
+
+  $('#coachStats').innerHTML =
+    tile('Sessions today', String(mine.length), taught+' completed') +
+    tile('Your earnings today', money(Math.round(revenue*rate)), Math.round(rate*100)+'% of eligible revenue') +
+    tile('Next up', mine.filter(b=>mins(b.start)>NOW).length? hhmm(mins(mine.filter(b=>mins(b.start)>NOW)[0].start)) : '—', 'today');
+
+  $('#coachDay').innerHTML = mine.length ? mine.sort((a,b)=>mins(a.start)-mins(b.start)).map(b=>{
+    const fam=famOf(b.category);
+    const gap=(DAY.waiverGaps||[]).find(g=>g.household===b.household);
+    return '<div class="row"><span class="bar" style="background:'+fam.color+'"></span>'+
+      '<span class="when">'+hhmm(mins(b.start))+'</span>'+
+      '<span><span class="who">'+esc((b.participants&&b.participants[0])||b.household||'')+'</span><br>'+
+      '<span class="what">'+esc(b.service)+' · '+esc((b.resources||[]).filter(r=>r.code.startsWith('CAGE')||r.code.startsWith('HITTRAX')).map(r=>r.code).join(' + '))+'</span></span>'+
+      '<span class="acts">'+
+      (gap?'<span class="chip warn">Waiver needed</span>':'')+
+      (b.status==='completed'?'<span class="chip">Done</span>':
+       b.status==='checked_in'?'<button class="btn sm">Complete</button>':'<button class="btn sec sm">Start</button>')+
+      '<button class="btn ghost sm">Note</button></span></div>';
+  }).join('') : emptyRow('No sessions assigned today.');
+}
+
+/* ========================================================= SERVICE BUILDER */
+function renderBuilder(){
+  let h='<thead><tr><th>Service</th><th>Duration</th><th class="right">Price</th><th>Requires</th></tr></thead><tbody>';
+  STATIC.services.forEach(s=>{
+    const fam=famOf(s.category);
+    const req=(s.requirements||[]).map(r=>{
+      let x = r.qty>1 ? r.qty+'× '+r.type : r.type;
+      const attrs = r.attrs && Object.keys(r.attrs).length
+        ? ' <code style="font-size:10.5px;background:var(--chalk-100);padding:1px 4px;border-radius:3px">'+esc(JSON.stringify(r.attrs))+'</code>' : '';
+      const q = r.quals && r.quals.length ? ' <span class="chip info" style="font-size:10px;padding:1px 6px">'+esc(r.quals.join(', '))+'</span>' : '';
+      return x+attrs+q;
+    }).join('<br>');
+    h+='<tr><td><span class="dot" style="background:'+fam.color+';display:inline-block;margin-right:6px"></span>'+
+       '<strong>'+esc(s.name)+'</strong></td>'+
+       '<td class="mono">'+s.minutes+' min</td>'+
+       '<td class="right mono">'+(s.pricingModel==='per_minute'? money(s.priceCents)+'/min' : money(s.priceCents))+'</td>'+
+       '<td style="font-size:12px;line-height:1.6">'+(req||'<span style="color:var(--chalk-500)">—</span>')+'</td></tr>';
+  });
+  $('#svcTable').innerHTML=h+'</tbody>';
+
+  const ht=STATIC.services.find(s=>s.slug==='hittrax-lesson');
+  $('#svcExample').innerHTML =
+    '<dl class="kv"><dt>Duration</dt><dd>'+ht.minutes+' minutes</dd>'+
+    '<dt>Buffers</dt><dd>'+ht.bufferBefore+' min before · '+ht.bufferAfter+' min after</dd>'+
+    '<dt>Age range</dt><dd>'+ht.minAge+'–'+ht.maxAge+'</dd>'+
+    '<dt>Price</dt><dd>'+money(ht.priceCents)+'</dd></dl>'+
+    '<div class="sect"><h4>Requirements</h4>'+
+    (ht.requirements||[]).map(r=>'<div class="res-row"><strong>'+esc(r.label)+'</strong>'+
+      '<span class="lab">'+esc(r.type)+(r.attrs&&Object.keys(r.attrs).length?' · '+esc(JSON.stringify(r.attrs)):'')+
+      (r.quals&&r.quals.length?' · '+esc(r.quals.join(', ')):'')+'</span></div>').join('')+
+    '</div><div class="note" style="margin-top:11px">Change <code>{"has_hittrax": true}</code> to '+
+    '<code>{"length_ft": 50}</code> and this becomes a 50 ft lesson. No code changes.</div>';
+}
+
+/* ==================================================================== ABOUT */
+function renderProof(){
+  const rows=[
+    ['A private lesson blocks the coach and the cage','Both reserved in one transaction'],
+    ['A HitTrax lesson blocks coach, cage and the unit','3 resources, all or nothing'],
+    ['6 registrations do not add cage reservations','Group capacity ≠ resource duplication'],
+    ['A party reserves 4 resources at once','Room + 2 cages + host'],
+    ['12 concurrent checkouts, one slot','Exactly 1 winner'],
+    ['12 concurrent registrations, final seat','Exactly 1 registered'],
+    ['Double-clicked Pay','One booking, one charge'],
+    ['Abandoned checkout','Slot returns to sale on expiry'],
+    ['Trailing buffer blocks a back-to-back start','Transition time is structural'],
+    ['Recurring 4:00 PM series across a DST change','Stays 4:00 PM local'],
+    ['Stripe event replayed','No duplicate payment'],
+    ['Audit entry update or delete','Refused by trigger'],
+  ];
+  $('#proofTable').innerHTML='<thead><tr><th>Assertion</th><th>Result</th></tr></thead><tbody>'+
+    rows.map(r=>'<tr><td>'+esc(r[0])+'</td><td><span class="chip ok">'+esc(r[1])+'</span></td></tr>').join('')+
+    '</tbody>';
+}
+
+
+/* ============================================================== PUBLIC SITE */
+const PROGRAMS = CUST.programs || [];
+const HOUSEHOLDS = CUST.households || [];
+
+function renderSite(){
+  const cages = STATIC.resources.filter(r=>r.typeKey==='cage');
+  $('#heroFacts').innerHTML =
+    '<div><b>'+cages.length+'</b>batting cages</div>'+
+    '<div><b>'+STATIC.coaches.length+'</b>coaches</div>'+
+    '<div><b>1</b>HitTrax simulator</div>'+
+    '<div><b>7</b>days a week</div>';
+
+  /* Services, grouped by the same five families the calendar uses. */
+  const shown = STATIC.services.filter(s=>s.online);
+  $('#siteServices').innerHTML = shown.map(s=>{
+    const fam=famOf(s.category);
+    const price = s.pricingModel==='per_minute'
+      ? money(s.priceCents*60)+' / hour'
+      : money(s.priceCents)+' · '+s.minutes+' min';
+    const needs = (s.requirements||[]).map(r=>{
+      if(r.type==='Coach') return (r.quals&&r.quals.length? r.quals[0].replace(' Instruction','')+' coach' : 'a coach');
+      if(r.type==='Batting Cage') return r.qty>1 ? r.qty+' cages'
+        : (r.attrs&&r.attrs.has_hittrax ? 'the HitTrax cage'
+          : r.attrs&&r.attrs.has_mound ? 'a mound cage'
+          : r.attrs&&r.attrs.length_ft ? 'a '+r.attrs.length_ft+' ft cage' : 'a cage');
+      if(r.type==='HitTrax System') return 'the HitTrax unit';
+      if(r.type==='Party / Event Space') return 'the party room';
+      if(r.type==='Event Host') return r.qty>1? r.qty+' hosts':'a host';
+      if(r.type==='Lobby') return 'lobby space';
+      return r.type.toLowerCase();
+    });
+    return '<a href="#" data-tab="book" style="border-top-color:'+fam.color+'">'+
+      '<span class="t">'+esc(s.name)+'</span>'+
+      '<span class="d">'+esc(s.desc||'')+'</span>'+
+      (needs.length? '<span class="d" style="margin-top:6px">Includes '+esc(needs.join(', '))+'.</span>':'')+
+      '<span class="p">'+price+' &rarr;</span></a>';
+  }).join('');
+
+  /* Programs with genuine fill rates. */
+  $('#sitePrograms').innerHTML = PROGRAMS.map(pr=>{
+    const pct = Math.round((pr.enrolled/pr.capacity)*100);
+    const full = pr.enrolled >= pr.capacity;
+    const left = pr.capacity - pr.enrolled;
+    const dates = pr.sessions.length>1
+      ? new Date(pr.startsOn+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})+' – '+
+        new Date(pr.endsOn+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})
+      : new Date(pr.startsOn+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+    const t = pr.sessions[0];
+    return '<div class="progcard">'+
+      '<h4>'+esc(pr.name)+'</h4>'+
+      '<div class="meta">'+esc(dates)+' &middot; '+hhmm(mins(t.start))+'–'+hhmm(mins(t.end))+
+        ' &middot; ages '+pr.minAge+'–'+pr.maxAge+'</div>'+
+      '<p>'+esc(pr.summary)+'</p>'+
+      '<div class="fill"><i style="width:'+Math.min(pct,100)+'%;background:'+(full?'var(--danger)':'var(--cat-camp)')+'"></i></div>'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-top:9px">'+
+        (full? '<span class="chip danger">Full — waitlist open</span>'
+             : '<span class="chip ok">'+left+' spot'+(left===1?'':'s')+' left of '+pr.capacity+'</span>')+
+        '<span class="spacer" style="margin-left:auto"></span>'+
+        '<strong>'+money(pr.priceCents)+'</strong></div>'+
+      '<div style="margin-top:11px;display:flex;gap:7px">'+
+        '<button class="btn sm" data-prog="'+esc(pr.slug)+'">'+(full?'Join waitlist':'Register')+'</button>'+
+        '<button class="btn ghost sm" data-prog="'+esc(pr.slug)+'">Details</button></div>'+
+      '</div>';
+  }).join('');
+
+  $('#siteCoaches').innerHTML = STATIC.coaches.map(c=>{
+    const parts=c.name.split(' ');
+    return '<div class="coachcard">'+
+      '<div class="avatar">'+esc((parts[0]||' ')[0]+(parts[1]||' ')[0])+'</div>'+
+      '<div style="font-weight:700;font-size:14.5px">'+esc(c.name)+'</div>'+
+      '<div style="font-size:12px;color:var(--chalk-600);margin-top:2px">'+esc(c.headline||'')+'</div>'+
+      '<div style="margin-top:9px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">'+
+        (c.quals||[]).map(q=>'<span class="chip info" style="font-size:10.5px;padding:1px 7px">'+esc(q)+'</span>').join('')+
+      '</div></div>';
+  }).join('');
+
+  const party = STATIC.services.find(s=>s.slug==='birthday-party');
+  $('#siteParty').innerHTML =
+    '<div class="progcard"><h4>'+esc(party.name)+'</h4>'+
+    '<div class="meta">'+party.minutes+' minutes &middot; up to 20 children &middot; ages 4–16</div>'+
+    '<p>'+esc(party.desc)+'</p>'+
+    '<ul style="font-size:13px;color:var(--chalk-700);line-height:1.8;margin:10px 0 0;padding-left:18px">'+
+      '<li>Two cages reserved for your group</li>'+
+      '<li>Private party room for food and presents</li>'+
+      '<li>A host who runs the whole session</li>'+
+      '<li>15 minutes setup and 30 minutes cleanup, held for you</li></ul>'+
+    '<div style="margin-top:12px;display:flex;align-items:center;gap:9px">'+
+      '<strong style="font-size:19px">'+money(party.priceCents)+'</strong>'+
+      '<span class="chip warn">$150 deposit</span>'+
+      '<button class="btn accent sm" style="margin-left:auto" data-tab="book">Check dates</button></div></div>'+
+    '<div class="card" style="box-shadow:none"><div class="card-b">'+
+      '<h4 style="font-size:15px;margin-bottom:9px">Popular add-ons</h4>'+
+      '<div class="money"><span>Pizza &amp; drinks package</span><span>'+money(9000)+'</span></div>'+
+      '<div class="money"><span>Decorations &amp; party favors</span><span>'+money(6500)+'</span></div>'+
+      '<div class="money"><span>Additional guest</span><span>'+money(2000)+' each</span></div>'+
+      '<div class="money"><span>Add HitTrax</span><span>'+money(3000)+'</span></div>'+
+      '<p style="font-size:12px;color:var(--chalk-600);margin-top:11px">Adding HitTrax moves your party to the 70&nbsp;ft cage, because that is where the unit lives. The system handles that for you.</p>'+
+    '</div></div>';
+
+  $('#siteMemberships').innerHTML = (STATIC.memberships||[]).map(m=>
+    '<div class="price-tier"><div style="font-weight:700;font-size:15px">'+esc(m.name)+'</div>'+
+    '<div class="amt">'+money(m.priceCents)+'</div>'+
+    '<div style="font-size:12px;color:var(--chalk-600)">per '+esc(m.interval)+'</div>'+
+    '<ul><li>'+m.credits+' included credits</li><li>'+m.discount+'% off everything else</li>'+
+    '<li>Priority booking window</li></ul>'+
+    '<button class="btn sec sm" style="margin-top:13px">Choose plan</button></div>').join('');
+
+  $('#sitePackages').innerHTML = (STATIC.packages||[]).map(pk=>
+    '<div class="price-tier"><div style="font-weight:700;font-size:14px">'+esc(pk.name)+'</div>'+
+    '<div class="amt">'+money(pk.priceCents)+'</div>'+
+    '<div style="font-size:12px;color:var(--chalk-600)">'+pk.credits+' '+esc(pk.unit)+' credits</div>'+
+    '<button class="btn sec sm" style="margin-top:13px">Buy</button></div>').join('');
+
+  $('#siteFacility').innerHTML = STATIC.resources
+    .filter(r=>['cage','party_room','lobby','hittrax'].includes(r.typeKey))
+    .map(r=>{
+      const a=r.attributes||{};
+      const bits=[];
+      if(a.length_ft) bits.push(a.length_ft+' ft');
+      if(a.has_mound) bits.push('mound');
+      if(a.has_hittrax) bits.push('HitTrax');
+      if(r.capacity>1) bits.push('holds '+r.capacity);
+      return '<div style="border:1px solid var(--chalk-200);border-radius:11px;padding:12px;background:#fff">'+
+        '<div style="font-weight:700;font-size:13.5px">'+esc(r.name)+'</div>'+
+        '<div style="font-size:12px;color:var(--chalk-600);margin-top:2px">'+esc(bits.join(' · ')||'&nbsp;')+'</div></div>';
+    }).join('');
+}
+
+/* ========================================================= CUSTOMER PORTAL */
+let acctPane = 'dash';
+function currentHH(){ return HOUSEHOLDS.find(h=>h.id===$('#hhPick').value) || HOUSEHOLDS[0]; }
+
+function renderAccount(){
+  const h = currentHH(); if(!h) return;
+  const bookings = (h.bookings||[]).slice().sort((a,b)=>
+    (a.date+a.start).localeCompare(b.date+b.start));
+  const upcoming = bookings.filter(b=>['confirmed','checked_in'].includes(b.status));
+  const past = bookings.filter(b=>['completed','cancelled','no_show'].includes(b.status));
+  const owed = bookings.filter(b=>b.status!=='cancelled')
+                       .reduce((s,b)=>s+Math.max(b.totalCents-b.paidCents,0),0);
+  const gaps = (h.participants||[]).filter(p=>!p.waiver);
+  const body = $('#acctBody');
+
+  if(acctPane==='dash'){
+    const next = upcoming[0];
+    body.innerHTML =
+      '<div class="grid g2" style="margin-bottom:14px">'+
+        (next
+          ? '<div class="next-card"><div class="lbl">Next up</div>'+
+            '<h3>'+esc(next.title||next.service)+'</h3>'+
+            '<div class="when">'+esc(new Date(next.date+'T12:00').toLocaleDateString('en-US',
+                {weekday:'long',month:'long',day:'numeric'}))+' at '+hhmm(mins(next.start))+'</div>'+
+            '<div class="who">'+esc((next.coach? next.coach+' · ':'')+(next.resources||[]).join(' + '))+
+            ' · confirmation '+esc(next.code)+'</div>'+
+            '<div style="margin-top:15px;display:flex;gap:7px;flex-wrap:wrap">'+
+              '<button class="btn sec sm">Reschedule</button>'+
+              '<button class="btn ghost sm" style="color:#cdd9e8" data-cancel="'+esc(next.code)+'">Cancel…</button>'+
+            '</div></div>'
+          : '<div class="card"><div class="card-b">'+
+            '<p style="margin:0 0 11px;color:var(--chalk-700);font-size:13.5px">Nothing booked right now.</p>'+
+            '<button class="btn" data-tab="book">Book a lesson</button></div></div>')+
+        '<div class="grid g2" style="align-content:start">'+
+          tile('Balance due', owed? money(owed):'$0.00', owed? 'pay before your session':'all settled')+
+          tile('Lesson credits',
+               String((h.packages||[]).reduce((s,p)=>s+p.remaining,0)),
+               (h.packages||[]).length? esc(h.packages[0].name):'no package')+
+          tile('Account credit', money(Number(h.creditCents||0)), 'applies at checkout')+
+          tile('Waivers', gaps.length? gaps.length+' missing':'All signed',
+               gaps.length? esc(gaps.map(g=>g.name.split(' ')[0]).join(', ')):'nothing to do')+
+        '</div>'+
+      '</div>'+
+      (gaps.length? '<div class="card" style="margin-bottom:14px"><div class="card-b">'+
+        '<div class="note"><strong>A waiver is outstanding.</strong><br>'+
+        esc(gaps.map(g=>g.name).join(' and '))+' cannot take part until it is signed. '+
+        'It takes about a minute.<div style="margin-top:10px"><button class="btn sm">Sign now</button></div></div>'+
+      '</div></div>' : '')+
+      '<div class="card"><div class="card-h"><h3>Upcoming</h3></div>'+
+        (upcoming.length? upcoming.map(acctRow).join('') : emptyRow('Nothing upcoming.'))+
+      '</div>';
+  }
+
+  if(acctPane==='bookings'){
+    body.innerHTML =
+      '<div class="card" style="margin-bottom:14px"><div class="card-h"><h3>Upcoming</h3></div>'+
+        (upcoming.length? upcoming.map(acctRow).join('') : emptyRow('Nothing upcoming.'))+'</div>'+
+      '<div class="card" style="margin-bottom:14px"><div class="card-h"><h3>Program registrations</h3></div>'+
+        ((h.registrations||[]).length
+          ? h.registrations.map(r=>
+            '<div class="row"><span class="bar" style="background:var(--cat-camp)"></span>'+
+            '<span><span class="who">'+esc(r.program)+'</span><br><span class="what">'+
+            esc(r.participant)+' · starts '+esc(new Date(r.startsOn+'T12:00').toLocaleDateString('en-US',
+              {month:'long',day:'numeric'}))+' · '+esc(r.code)+'</span></span>'+
+            '<span class="acts"><span class="chip '+(r.status==='registered'?'ok':'warn')+'">'+esc(r.status)+'</span>'+
+            (r.paidCents<r.priceCents? '<span class="chip danger">'+money(r.priceCents-r.paidCents)+' due</span>':'')+
+            '</span></div>').join('')
+          : emptyRow('No program registrations.'))+'</div>'+
+      '<div class="card"><div class="card-h"><h3>Past</h3></div>'+
+        (past.length? past.map(acctRow).join('') : emptyRow('No past bookings.'))+'</div>';
+  }
+
+  if(acctPane==='household'){
+    body.innerHTML =
+      '<div class="card" style="margin-bottom:14px"><div class="card-h"><h3>Account holder</h3></div>'+
+        '<div class="card-b"><dl class="kv">'+
+        '<dt>Name</dt><dd>'+esc(h.contact||'')+'</dd>'+
+        '<dt>Email</dt><dd>'+esc(h.email||'')+'</dd>'+
+        '<dt>Phone</dt><dd>'+esc(h.phone||'')+'</dd></dl></div></div>'+
+      '<div class="card"><div class="card-h"><h3>Participants</h3><span class="spacer"></span>'+
+        '<button class="btn sec sm">Add a child</button></div>'+
+        (h.participants||[]).map(p=>
+          '<div class="row"><span class="bar" style="background:var(--navy-600)"></span>'+
+          '<span><span class="who">'+esc(p.name)+'</span><br><span class="what">'+
+          'age '+p.age+' · '+esc(p.sport)+' · bats '+esc(p.bats||'—')+' / throws '+esc(p.throws||'—')+
+          (p.team? ' · '+esc(p.team):'')+(p.shirt? ' · shirt '+esc(p.shirt):'')+'</span></span>'+
+          '<span class="acts">'+
+            (p.waiver? '<span class="chip ok">Waiver on file</span>':'<span class="chip warn">Waiver needed</span>')+
+            '<button class="btn ghost sm">Edit</button></span></div>').join('')+
+      '</div>';
+  }
+
+  if(acctPane==='credits'){
+    body.innerHTML =
+      '<div class="grid g2" style="margin-bottom:14px">'+
+      ((h.packages||[]).length
+        ? h.packages.map(pk=>'<div class="pkg">'+
+            '<div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--chalk-600);font-weight:700">'+esc(pk.name)+'</div>'+
+            '<div class="big">'+pk.remaining+'<span style="font-size:16px;color:var(--chalk-600)"> of '+pk.granted+'</span></div>'+
+            '<div style="font-size:12.5px;color:var(--chalk-600);margin-top:3px">'+esc(pk.unit)+' credits remaining · expires '+esc(pk.expires||'—')+'</div>'+
+            '<div class="meter"><i style="width:'+Math.round((pk.remaining/pk.granted)*100)+'%"></i></div>'+
+            '<p style="font-size:12px;color:var(--chalk-600);margin:10px 0 0">Cancel inside the policy window and the credit comes back — it is a ledger entry, not a number someone edits.</p>'+
+          '</div>').join('')
+        : '<div class="card"><div class="card-b"><p style="margin:0 0 11px;font-size:13.5px;color:var(--chalk-700)">No lesson package yet. Buying ten lessons saves $150.</p><button class="btn sec sm" data-goto="memberships">See packages</button></div></div>')+
+      (h.membership
+        ? '<div class="card"><div class="card-h"><h3>'+esc(h.membership.name)+'</h3><span class="spacer"></span>'+
+          '<span class="chip ok">'+esc(h.membership.status)+'</span></div><div class="card-b">'+
+          '<dl class="kv"><dt>Price</dt><dd>'+money(h.membership.priceCents)+' / '+esc(h.membership.interval)+'</dd>'+
+          '<dt>Member discount</dt><dd>'+h.membership.discount+'% off</dd>'+
+          '<dt>Included credits</dt><dd>'+h.membership.credits+' per period</dd>'+
+          '<dt>Renews</dt><dd>'+esc(h.membership.renews||'—')+'</dd></dl>'+
+          '<div style="margin-top:12px;display:flex;gap:7px"><button class="btn sec sm">Pause</button>'+
+          '<button class="btn ghost sm">Cancel plan</button></div></div></div>'
+        : '<div class="card"><div class="card-b"><p style="margin:0 0 11px;font-size:13.5px;color:var(--chalk-700)">You are not on a membership. Members get priority booking and up to 20% off.</p><button class="btn sec sm" data-goto="memberships">Compare plans</button></div></div>')+
+      '</div>';
+  }
+
+  if(acctPane==='waivers'){
+    body.innerHTML = '<div class="card"><div class="card-h"><h3>Waivers</h3></div>'+
+      (h.participants||[]).map(p=>
+        '<div class="row"><span class="bar" style="background:'+(p.waiver?'var(--ok)':'var(--warn)')+'"></span>'+
+        '<span><span class="who">'+esc(p.name)+'</span><br><span class="what">'+
+        'General Liability &amp; Assumption of Risk, version 1</span></span>'+
+        '<span class="acts">'+(p.waiver
+          ? '<span class="chip ok">Signed</span><button class="btn ghost sm">Download</button>'
+          : '<span class="chip warn">Not signed</span><button class="btn sm">Sign now</button>')+
+        '</span></div>').join('')+
+      '<div class="card-b"><p style="font-size:12.5px;color:var(--chalk-600);margin:0">'+
+      'Signatures are bound to a specific waiver version. If ATD publishes a new version with material '+
+      'changes, everyone signed on the old one is flagged automatically — nothing has to be chased manually.'+
+      '</p></div></div>';
+  }
+}
+
+function acctRow(b){
+  const fam=famOf(b.category);
+  const owe=Math.max(b.totalCents-b.paidCents,0);
+  const dt=new Date(b.date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  return '<div class="row"><span class="bar" style="background:'+fam.color+'"></span>'+
+    '<span style="min-width:96px"><span class="who">'+esc(dt)+'</span><br>'+
+    '<span class="what mono">'+hhmm(mins(b.start))+'</span></span>'+
+    '<span><span class="who">'+esc(b.title||b.service)+'</span><br><span class="what">'+
+    esc((b.coach? b.coach+' · ':'')+(b.resources||[]).join(' + '))+'</span></span>'+
+    '<span class="acts">'+statusChip(b)+
+      (b.status==='confirmed'? '<button class="btn ghost sm">Manage</button>':'')+
+    '</span></div>';
+}
+
+/* Delegated actions across the site + portal. */
+document.addEventListener('click', (e)=>{
+  const t = e.target.closest('[data-tab],[data-goto],[data-prog],[data-cancel]');
+  if(!t) return;
+  if(t.dataset.tab){
+    e.preventDefault();
+    const btn = $$('.tab').find(x=>x.dataset.view===t.dataset.tab);
+    if(btn) btn.click();
+    return;
+  }
+  if(t.dataset.goto){
+    e.preventDefault();
+    const sec = $('#sec-'+t.dataset.goto);
+    if(sec) sec.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
+  if(t.dataset.prog){
+    e.preventDefault();
+    const pr = PROGRAMS.find(x=>x.slug===t.dataset.prog);
+    if(pr) openProgram(pr);
+    return;
+  }
+  if(t.dataset.cancel){
+    e.preventDefault();
+    openCustomerCancel(t.dataset.cancel);
+    return;
+  }
+});
+
+/* The customer sees the same policy decision the front desk sees, BEFORE
+   confirming — no surprises after the fact. */
+function openCustomerCancel(code){
+  const h = currentHH();
+  const b = (h.bookings||[]).find(x=>x.code===code);
+  if(!b) return;
+  lastFocus=document.activeElement;
+  const start = new Date(b.date+'T'+b.start+':00');
+  const hoursBefore = Math.max((start.getTime() - Date.now())/3600000, 0);
+  const tier = hoursBefore>=24
+    ? ['Full refund', 'You are more than 24 hours out, so '+money(b.paidCents)+' goes back to your card and any lesson credit is returned.']
+    : hoursBefore>=12
+      ? ['50% refund', 'You are inside the 24-hour window, so '+money(Math.round(b.paidCents*0.5))+' is refunded and the lesson credit is returned.']
+      : ['No refund', 'You are inside the final 12-hour window, so the session is forfeited. Call us at (555) 555-0100 if something has come up — the desk can override this.'];
+
+  $('#dTitle').textContent = 'Cancel this booking?';
+  $('#dSub').textContent = b.service+' · '+new Date(b.date+'T12:00').toLocaleDateString('en-US',
+    {weekday:'long',month:'long',day:'numeric'})+' at '+hhmm(mins(b.start));
+  $('#dBody').innerHTML =
+    '<div class="note" style="margin-bottom:14px"><strong>'+esc(tier[0])+'</strong><br>'+esc(tier[1])+'</div>'+
+    '<dl class="kv"><dt>Notice given</dt><dd>'+
+      (hoursBefore>=24? Math.floor(hoursBefore/24)+' day(s)' : Math.round(hoursBefore)+' hour(s)')+' before</dd>'+
+    '<dt>You paid</dt><dd>'+money(b.paidCents)+'</dd>'+
+    '<dt>Policy</dt><dd>Standard Lesson Policy</dd></dl>'+
+    '<p style="font-size:12.5px;color:var(--chalk-600);margin-top:13px">Cancelling releases '+
+    esc((b.resources||[]).join(' and '))+' immediately, and anyone waiting for this time is offered it automatically.</p>';
+  $('#dFoot').innerHTML =
+    '<button class="btn danger sm">Yes, cancel</button>'+
+    '<button class="btn sec sm">Reschedule instead</button>'+
+    '<button class="btn ghost sm" onclick="return false">Keep it</button>';
+  openDrawer();
+}
+
+function openProgram(pr){
+  lastFocus=document.activeElement;
+  const full = pr.enrolled >= pr.capacity;
+  $('#dTitle').textContent = pr.name;
+  $('#dSub').textContent = pr.sessions.length + (pr.sessions.length>1?' sessions':' session')+
+    ' · ages '+pr.minAge+'–'+pr.maxAge;
+  let h = '<p style="font-size:13.5px;line-height:1.6;margin-top:0">'+esc(pr.desc)+'</p>'+
+    '<dl class="kv"><dt>Price</dt><dd>'+money(pr.priceCents)+
+      (pr.depositCents? ' ('+money(pr.depositCents)+' deposit)':'')+'</dd>'+
+    '<dt>Spots</dt><dd>'+(full? 'Full — waitlist open' : (pr.capacity-pr.enrolled)+' of '+pr.capacity+' left')+'</dd>'+
+    (pr.siblingPct>0? '<dt>Siblings</dt><dd>'+pr.siblingPct+'% off each additional child</dd>':'')+
+    '</dl>';
+  h += '<div class="sect"><h4>Schedule</h4>';
+  pr.sessions.forEach(ss=>{
+    h += '<div class="res-row"><strong>'+
+      esc(new Date(ss.date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))+
+      '</strong><span class="lab">'+hhmm(mins(ss.start))+'–'+hhmm(mins(ss.end))+' · '+
+      esc((ss.resources||[]).join(' + '))+'</span></div>';
+  });
+  h += '<p style="font-size:12px;color:var(--chalk-600);margin:6px 0 0">Those cages and coaches are '+
+       'already reserved for every session — the program holds them whether one child registers or twenty.</p></div>';
+  if(pr.instructions) h += '<div class="sect"><h4>For parents</h4><div class="note">'+esc(pr.instructions)+'</div></div>';
+  if(pr.collectsShirt || pr.collectsLunch)
+    h += '<div class="sect"><h4>We will ask for</h4><div class="res-row">'+
+      esc([pr.collectsShirt?'Shirt size':null, pr.collectsLunch?'Lunch choice':null,
+           'Allergies and medical notes','Emergency contacts','Authorized pickup people']
+          .filter(Boolean).join(' · '))+'</div></div>';
+  $('#dBody').innerHTML = h;
+  $('#dFoot').innerHTML = full
+    ? '<button class="btn sm">Join the waitlist</button><button class="btn ghost sm">Notify me about future dates</button>'
+    : '<button class="btn accent sm">Register</button><button class="btn sec sm">Register two children</button>';
+  openDrawer();
+}
+
+/* ==================================================================== init */
+$('#filterCat').innerHTML='<option value="all">All categories</option>'+
+  STATIC.categories.map(c=>'<option value="'+c.key+'">'+esc(c.name)+'</option>').join('');
+$('#filterCat').addEventListener('change',renderTimeline);
+$('#showBuf').addEventListener('change',renderTimeline);
+$$('.seg [data-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+  $$('.seg [data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));
+  btn.setAttribute('aria-pressed','true');
+  const day = btn.dataset.mode==='day';
+  $('#tlHost').style.display = day?'':'none';
+  $('#agendaHost').style.display = day?'none':'';
+  $('#legend').style.display = day?'':'none';
+}));
+$('#hhPick').innerHTML = HOUSEHOLDS.map(h=>'<option value="'+h.id+'">'+esc(h.name)+'</option>').join('');
+// Open on the busiest household — a balance due, a party, a waitlist entry —
+// rather than whichever name sorts first.
+{
+  const preferred = HOUSEHOLDS.find(h=>h.name==='Jackson Family');
+  if(preferred) $('#hhPick').value = preferred.id;
+}
+$('#hhPick').addEventListener('change',renderAccount);
+$$('#acctNav button').forEach(b=>b.addEventListener('click',()=>{
+  $$('#acctNav button').forEach(x=>x.setAttribute('aria-selected','false'));
+  b.setAttribute('aria-selected','true'); acctPane=b.dataset.pane; renderAccount();
+}));
+$('#coachPick').innerHTML = STATIC.coaches.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
+$('#coachPick').addEventListener('change',renderCoach);
+
+let rzT; window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(renderTimeline,180);});
+renderSite(); renderAccount();
+renderLegend(); renderTimeline(); renderAgenda(); renderDesk(); renderBook(); renderCoach(); renderBuilder(); renderProof();
+
+/* On narrow screens the timeline is unusable; agenda is the honest fallback. */
+if(window.matchMedia('(max-width:760px)').matches){
+  $$('.seg [data-mode]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.mode==='agenda'?'true':'false'));
+  $('#tlHost').style.display='none'; $('#agendaHost').style.display=''; $('#legend').style.display='none';
+}
+</script>
+</body>
+</html>
